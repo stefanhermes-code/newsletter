@@ -41,23 +41,51 @@ if 'is_finding_news' not in st.session_state:
     st.session_state.is_finding_news = False
 
 def main():
-    # Get user email
-    user_email = customer_selector.get_user_email()
+    # Check authentication
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
     
-    # If no email, show login/email input
-    if user_email is None:
+    # Get user email if authenticated
+    user_email = customer_selector.get_user_email() if st.session_state.authenticated else None
+    
+    # If not authenticated, show login form
+    if not st.session_state.authenticated:
         st.title("📰 GlobalNewsPilot")
         st.header("Welcome!")
+        st.markdown("Please enter your credentials to access your newsletters.")
         
-        with st.form("user_email_form"):
-            email = st.text_input("Enter your email address", type="default")
-            submitted = st.form_submit_button("Continue", type="primary")
+        with st.form("login_form"):
+            email = st.text_input("Email Address", placeholder="user@company.com", key="login_email")
+            password = st.text_input("Password", type="password", key="login_password")
             
-            if submitted and email:
-                customer_selector.set_user_email(email)
-                st.rerun()
+            # Legal disclaimer (same as PI3)
+            st.caption("By submitting content (including files), you confirm you have the right to share it and grant PU ExpertCenter/PI3 a worldwide, royalty‑free license to use it to operate, secure, and improve the service. You waive any claims arising from such permitted use, to the maximum extent allowed by law. Do not upload confidential or personal data. This service is informational only and not engineering, legal, or safety advice.")
+            
+            submitted = st.form_submit_button("Login", type="primary")
+            
+            if submitted:
+                if email and password:
+                    # Authenticate user
+                    is_authenticated, error_message, user_data = customer_selector.authenticate_user(email, password)
+                    
+                    if is_authenticated:
+                        # Check if user is already logged in elsewhere
+                        if customer_selector.is_user_logged_in_elsewhere(email):
+                            st.error("This email address is already logged in elsewhere. Only one session per email is allowed.")
+                        else:
+                            # Login successful
+                            st.session_state.authenticated = True
+                            customer_selector.set_user_email(email)
+                            st.session_state.current_user = email
+                            if user_data:
+                                st.session_state.valid_until = user_data.get("valid_until", "")
+                            st.success("Login successful!")
+                            st.rerun()
+                    else:
+                        st.error(error_message)
+                else:
+                    st.error("Please enter both email and password.")
         
-        st.info("Enter your email to access your newsletters")
         return
     
     # Get user's accessible newsletters
@@ -70,6 +98,18 @@ def main():
     
     # Store newsletters in session state
     st.session_state.user_newsletters = user_newsletters
+    
+    # Logout button in sidebar
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Logout", key="logout_button"):
+        st.session_state.authenticated = False
+        st.session_state.user_email = None
+        st.session_state.current_user = None
+        st.session_state.current_customer_id = None
+        st.session_state.user_newsletters = []
+        st.session_state.selected_article_ids = set()
+        st.session_state.found_articles = []
+        st.rerun()
     
     # Newsletter selector (always visible in sidebar)
     st.sidebar.title("📰 Newsletter")

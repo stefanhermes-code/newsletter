@@ -6,7 +6,7 @@ for the multi-tenant User App (GlobalNewsPilot).
 """
 
 import streamlit as st
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from user_modules.github_user import get_all_user_access_files, load_config
 import logging
 
@@ -76,13 +76,95 @@ def get_user_newsletters(user_email: str) -> List[Dict]:
                     "role": user.get("role", "viewer"),
                     "permissions": user.get("permissions", ["view"]),
                     "added_date": user.get("added_date", ""),
-                    "added_by": user.get("added_by", "")
+                    "added_by": user.get("added_by", ""),
+                    "password": user.get("password", ""),  # Include password for authentication
+                    "status": user.get("status", "Active"),
+                    "valid_until": user.get("valid_until", "")
                 })
                 break
     
     # Sort by name for consistent display
     user_newsletters.sort(key=lambda x: x["name"])
     return user_newsletters
+
+def authenticate_user(user_email: str, password: str) -> Tuple[bool, str, Optional[Dict]]:
+    """
+    Authenticate user with email and password
+    
+    Args:
+        user_email: User's email address
+        password: User's password
+    
+    Returns:
+        Tuple of (is_authenticated, error_message, user_data)
+        user_data is None if authentication fails
+    """
+    if not user_email or not password:
+        return False, "Email and password are required.", None
+    
+    # Get user's newsletters (includes password from user_access.json)
+    user_newsletters = get_user_newsletters(user_email)
+    
+    if not user_newsletters:
+        return False, "Invalid email or password.", None
+    
+    # Check password (check first newsletter's password - should be same across all)
+    # In practice, user should only be in one customer, but we check all
+    user_found = None
+    for newsletter in user_newsletters:
+        stored_password = newsletter.get("password", "")
+        if stored_password == password:
+            user_found = newsletter
+            break
+    
+    if not user_found:
+        return False, "Invalid email or password.", None
+    
+    # Check account status
+    status = user_found.get("status", "Active").strip()
+    if status.lower() != "active":
+        return False, "Your account is not active. Contact administrator.", None
+    
+    # Check expiration date (if provided)
+    valid_until_str = user_found.get("valid_until", "").strip()
+    if valid_until_str:
+        try:
+            from datetime import datetime
+            # Support multiple date formats
+            date_formats = ["%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y"]
+            valid_until = None
+            for fmt in date_formats:
+                try:
+                    valid_until = datetime.strptime(valid_until_str, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            
+            if valid_until and valid_until < datetime.now().date():
+                return False, "Your account has expired. Contact administrator.", None
+        except Exception:
+            # If date parsing fails, skip expiration check
+            pass
+    
+    return True, "", user_found
+
+def is_user_logged_in_elsewhere(user_email: str) -> bool:
+    """
+    Check if user is already logged in elsewhere (single session per email)
+    
+    This checks a sessions tracking file in GitHub.
+    For now, we'll use a simple approach - store active sessions in GitHub.
+    
+    Args:
+        user_email: User's email address
+    
+    Returns:
+        True if user is already logged in, False otherwise
+    """
+    # TODO: Implement session tracking in GitHub
+    # For now, return False (allow multiple sessions during development)
+    # Later, we'll track active sessions in customers/{customer_id}/data/sessions.json
+    return False
 
 def get_user_permissions(user_email: str, customer_id: str) -> Dict:
     """
