@@ -1,0 +1,12 @@
+{
+  "feeds": [
+    {
+      "name": "Example Tech News",
+      "url": "https://feeds.feedburner.com/oreilly/radar",
+      "enabled": true
+    }
+  ],
+  "last_updated": "stefan.hermes@htcglobal.asia",
+  "updated_at": "2025-01-15"
+}
+

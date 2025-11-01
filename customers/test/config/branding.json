@@ -1,0 +1,9 @@
+{
+  "application_name": "Test Newsletter",
+  "short_name": "TEST",
+  "newsletter_title_template": "{name} - Week {week}",
+  "footer_text": "Test Newsletter Footer",
+  "footer_url": "https://example.com",
+  "footer_url_display": "www.example.com"
+}
+
