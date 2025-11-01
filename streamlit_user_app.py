@@ -10,6 +10,7 @@ from user_modules import news_finder
 from user_modules import article_dashboard
 from user_modules import newsletter_generator
 from user_modules import config_manager
+from user_modules import password_manager
 from user_modules.github_user import list_newsletters, get_newsletter_content
 from datetime import datetime
 
@@ -161,6 +162,9 @@ def main():
             render_configuration(current_customer_id, user_email)
         else:
             st.error("You don't have permission to edit configuration. Premium tier required.")
+            st.info("Use the 'Settings' tab to change your password.")
+    elif page == "Settings":
+        render_settings(current_customer_id, user_email)
 
 def render_dashboard(customer_config, current_newsletter, user_email, customer_id):
     """Main dashboard - news finding and newsletter generation"""
@@ -341,7 +345,21 @@ def render_newsletters_viewer(customer_id, current_newsletter, user_email):
 
 def render_configuration(customer_id, user_email):
     """Configuration management (only if user has edit_config permission)"""
-    config_manager.render_configuration_page(customer_id, user_email)
+    tab1, tab2, tab3 = st.tabs(["Keywords", "RSS Feeds", "Change Password"])
+    
+    with tab1:
+        config_manager.render_keywords_editor(customer_id, user_email)
+    
+    with tab2:
+        config_manager.render_feeds_editor(customer_id, user_email)
+    
+    with tab3:
+        password_manager.render_password_change(customer_id, user_email)
+
+def render_settings(customer_id, user_email):
+    """Settings page (for all users - password change)"""
+    st.title("Settings")
+    password_manager.render_password_change(customer_id, user_email)
 
 if __name__ == "__main__":
     main()
