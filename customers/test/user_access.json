@@ -2,10 +2,16 @@
   "users": [
     {
       "email": "stefan.hermes@htcglobal.asia",
-      "password": "changeme123",
+      "password": "Windmill2025",
       "tier": "premium",
       "role": "admin",
-      "permissions": ["view", "edit", "generate", "manage_config", "edit_config"],
+      "permissions": [
+        "view",
+        "edit",
+        "generate",
+        "manage_config",
+        "edit_config"
+      ],
       "status": "Active",
       "valid_until": "",
       "added_date": "2025-01-15",
@@ -13,4 +19,3 @@
     }
   ]
 }
-
