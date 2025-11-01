@@ -142,6 +142,9 @@ def main():
     if has_edit_config:
         available_pages.append("Configuration")
     
+    # All authenticated users can change their password via Settings
+    available_pages.append("Settings")
+    
     page = st.sidebar.selectbox("Navigation", available_pages)
     
     # Load customer config
