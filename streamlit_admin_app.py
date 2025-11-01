@@ -36,6 +36,10 @@ def main():
         ]
     )
     
+    # Initialize onboarding session state
+    if 'onboarding_data' not in st.session_state:
+        st.session_state.onboarding_data = {}
+    
     # Main content area
     st.title("Newsletter Tool - Admin Dashboard")
     
@@ -90,24 +94,212 @@ def render_customer_management():
         st.info("Manage user access and payment tiers for each customer")
 
 def render_customer_onboarding():
-    """Customer Onboarding page"""
+    """Customer Onboarding page - Integrated into Admin App"""
     st.header("Customer Onboarding")
-    st.info("Customer onboarding wizard - Coming soon")
     
-    tab1, tab2 = st.tabs(["Start New Onboarding", "Pending Submissions"])
+    tab1, tab2, tab3 = st.tabs(["New Customer Onboarding", "Pending Submissions", "Manual Entry"])
     
     with tab1:
-        st.write("Initiate new customer onboarding")
-        col1, col2 = st.columns(2)
-        with col1:
-            customer_email = st.text_input("Customer Email")
-            customer_name = st.text_input("Customer Name (Optional)")
-        with col2:
-            st.write("")
-            st.button("Send Onboarding Link", type="primary", disabled=True)
+        st.subheader("Onboard New Customer")
+        st.write("Fill out the customer information below to create a new newsletter account.")
+        
+        # Step-by-step form (7 steps integrated here)
+        if 'onboarding_step' not in st.session_state:
+            st.session_state.onboarding_step = 1
+        
+        steps = ["Basic Info", "Branding", "Keywords", "Feeds", "Contact", "Review", "Create"]
+        progress = st.session_state.onboarding_step / len(steps)
+        st.progress(progress)
+        st.caption(f"Step {st.session_state.onboarding_step} of {len(steps)}: {steps[st.session_state.onboarding_step - 1]}")
+        
+        with st.form(f"onboarding_form_step_{st.session_state.onboarding_step}"):
+            if st.session_state.onboarding_step == 1:
+                render_onboarding_step1_basic_info()
+            elif st.session_state.onboarding_step == 2:
+                render_onboarding_step2_branding()
+            elif st.session_state.onboarding_step == 3:
+                render_onboarding_step3_keywords()
+            elif st.session_state.onboarding_step == 4:
+                render_onboarding_step4_feeds()
+            elif st.session_state.onboarding_step == 5:
+                render_onboarding_step5_contact()
+            elif st.session_state.onboarding_step == 6:
+                render_onboarding_step6_review()
+            elif st.session_state.onboarding_step == 7:
+                render_onboarding_step7_create()
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col1:
+                if st.session_state.onboarding_step > 1:
+                    if st.form_submit_button("← Back"):
+                        st.session_state.onboarding_step -= 1
+                        st.rerun()
+            with col3:
+                if st.session_state.onboarding_step < len(steps):
+                    if st.form_submit_button("Next →", type="primary"):
+                        st.session_state.onboarding_step += 1
+                        st.rerun()
     
     with tab2:
-        st.write("Pending onboarding submissions will appear here")
+        st.subheader("Pending Onboarding Submissions")
+        st.info("Pending customer submissions will appear here (if using customer-facing form option)")
+        st.write("Currently using direct admin entry - see 'New Customer Onboarding' tab")
+    
+    with tab3:
+        st.subheader("Manual Entry (Quick Setup)")
+        st.write("Quick manual entry for creating customers without full wizard")
+        st.button("Create Customer (Quick)", disabled=True, help="Coming soon")
+
+def render_onboarding_step1_basic_info():
+    """Onboarding Step 1: Basic Information"""
+    st.write("**Step 1: Basic Information**")
+    
+    customer_id = st.text_input("Customer ID *", 
+                                help="Lowercase, alphanumeric only. Example: 'acme', 'htc', 'apba'",
+                                value=st.session_state.get('onboarding_data', {}).get('customer_id', ''))
+    company_name = st.text_input("Company Name *",
+                                value=st.session_state.get('onboarding_data', {}).get('company_name', ''))
+    short_name = st.text_input("Short Name *",
+                              value=st.session_state.get('onboarding_data', {}).get('short_name', ''),
+                              help="Used in file names. Example: 'ACME', 'HTC'")
+    
+    if 'onboarding_data' not in st.session_state:
+        st.session_state.onboarding_data = {}
+    st.session_state.onboarding_data['customer_id'] = customer_id
+    st.session_state.onboarding_data['company_name'] = company_name
+    st.session_state.onboarding_data['short_name'] = short_name
+
+def render_onboarding_step2_branding():
+    """Onboarding Step 2: Branding"""
+    st.write("**Step 2: Newsletter Branding**")
+    
+    application_name = st.text_input("Application Name *",
+                                     value=st.session_state.get('onboarding_data', {}).get('application_name', ''),
+                                     help="What the newsletter will be called. Example: 'ACME Industry Newsletter'")
+    newsletter_title_template = st.text_input("Newsletter Title Template",
+                                             value=st.session_state.get('onboarding_data', {}).get('newsletter_title_template', '{name} - Week {week}'),
+                                             help="Use {name} and {week} as placeholders")
+    footer_text = st.text_input("Footer Text *",
+                               value=st.session_state.get('onboarding_data', {}).get('footer_text', ''),
+                               help="Text that appears at bottom of newsletters")
+    footer_url = st.text_input("Footer URL *",
+                              value=st.session_state.get('onboarding_data', {}).get('footer_url', ''),
+                              help="Company website URL")
+    footer_url_display = st.text_input("Footer URL Display Text",
+                                       value=st.session_state.get('onboarding_data', {}).get('footer_url_display', ''),
+                                       help="Display text for footer link. Example: 'www.acme.com'")
+    
+    if 'onboarding_data' not in st.session_state:
+        st.session_state.onboarding_data = {}
+    st.session_state.onboarding_data['application_name'] = application_name
+    st.session_state.onboarding_data['newsletter_title_template'] = newsletter_title_template
+    st.session_state.onboarding_data['footer_text'] = footer_text
+    st.session_state.onboarding_data['footer_url'] = footer_url
+    st.session_state.onboarding_data['footer_url_display'] = footer_url_display
+
+def render_onboarding_step3_keywords():
+    """Onboarding Step 3: Initial Keywords (Optional)"""
+    st.write("**Step 3: Initial Keywords (Optional)**")
+    st.info("You can add more keywords later. This step is optional.")
+    
+    if st.checkbox("Skip keywords for now", value=st.session_state.get('onboarding_data', {}).get('skip_keywords', False)):
+        st.session_state.onboarding_data['skip_keywords'] = True
+        st.session_state.onboarding_data['keywords'] = []
+        return
+    
+    st.write("Keyword input interface - Coming soon")
+    st.session_state.onboarding_data['keywords'] = []
+
+def render_onboarding_step4_feeds():
+    """Onboarding Step 4: Initial Feeds (Optional)"""
+    st.write("**Step 4: Initial RSS Feeds (Optional)**")
+    st.info("You can add more RSS feeds later. This step is optional.")
+    
+    if st.checkbox("Skip feeds for now", value=st.session_state.get('onboarding_data', {}).get('skip_feeds', False)):
+        st.session_state.onboarding_data['skip_feeds'] = True
+        st.session_state.onboarding_data['feeds'] = []
+        return
+    
+    st.write("RSS feed input interface - Coming soon")
+    st.session_state.onboarding_data['feeds'] = []
+
+def render_onboarding_step5_contact():
+    """Onboarding Step 5: Contact Information"""
+    st.write("**Step 5: Contact & Subscription Information**")
+    
+    contact_name = st.text_input("Contact Name *",
+                                 value=st.session_state.get('onboarding_data', {}).get('contact_name', ''))
+    contact_email = st.text_input("Contact Email *",
+                                value=st.session_state.get('onboarding_data', {}).get('contact_email', ''))
+    phone = st.text_input("Phone Number",
+                         value=st.session_state.get('onboarding_data', {}).get('phone', ''))
+    subscription_tier = st.selectbox("Subscription Tier",
+                                    ["Premium", "Standard", "Basic"],
+                                    index=1,
+                                    help="Determines user permissions")
+    
+    if 'onboarding_data' not in st.session_state:
+        st.session_state.onboarding_data = {}
+    st.session_state.onboarding_data['contact_name'] = contact_name
+    st.session_state.onboarding_data['contact_email'] = contact_email
+    st.session_state.onboarding_data['phone'] = phone
+    st.session_state.onboarding_data['subscription_tier'] = subscription_tier
+
+def render_onboarding_step6_review():
+    """Onboarding Step 6: Review"""
+    st.write("**Step 6: Review & Confirm**")
+    
+    data = st.session_state.get('onboarding_data', {})
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Basic Information")
+        st.write(f"**Customer ID:** {data.get('customer_id', 'N/A')}")
+        st.write(f"**Company:** {data.get('company_name', 'N/A')}")
+        st.write(f"**Short Name:** {data.get('short_name', 'N/A')}")
+        
+        st.subheader("Branding")
+        st.write(f"**Application Name:** {data.get('application_name', 'N/A')}")
+        st.write(f"**Title Template:** {data.get('newsletter_title_template', 'N/A')}")
+        st.write(f"**Footer:** {data.get('footer_text', 'N/A')}")
+        st.write(f"**Website:** {data.get('footer_url', 'N/A')}")
+    
+    with col2:
+        st.subheader("Contact Information")
+        st.write(f"**Name:** {data.get('contact_name', 'N/A')}")
+        st.write(f"**Email:** {data.get('contact_email', 'N/A')}")
+        st.write(f"**Phone:** {data.get('phone', 'N/A')}")
+        st.write(f"**Tier:** {data.get('subscription_tier', 'N/A')}")
+        
+        st.subheader("Configuration")
+        keywords_count = len(data.get('keywords', []))
+        feeds_count = len(data.get('feeds', []))
+        st.write(f"**Keywords:** {keywords_count}")
+        st.write(f"**RSS Feeds:** {feeds_count}")
+    
+    st.info("Review all information above. You can go back to edit if needed.")
+
+def render_onboarding_step7_create():
+    """Onboarding Step 7: Create Customer Account"""
+    st.write("**Step 7: Create Customer Account**")
+    
+    data = st.session_state.get('onboarding_data', {})
+    
+    st.success("Ready to create customer account!")
+    st.write("Click 'Create Customer Account' below to:")
+    st.write("1. Validate all information")
+    st.write("2. Create customer folder in GitHub")
+    st.write("3. Generate all configuration files")
+    st.write("4. Add customer to system")
+    
+    if st.form_submit_button("✅ Create Customer Account", type="primary"):
+        # TODO: Implement customer creation
+        st.success(f"Customer account created for {data.get('company_name', 'Customer')}!")
+        st.info("Customer account creation functionality will be implemented next.")
+        # Reset form after creation
+        # st.session_state.onboarding_step = 1
+        # st.session_state.onboarding_data = {}
 
 def render_config_viewer():
     """Configuration Viewer page"""
