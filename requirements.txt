@@ -1,0 +1,33 @@
+# Streamlit Framework
+streamlit>=1.28.0
+
+# GitHub API
+PyGithub>=2.1.1
+
+# Data Manipulation
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# Date/Time
+python-dateutil>=2.8.2
+
+# Email Sending (choose one or multiple)
+# Option A: SMTP (built-in, no extra package needed for smtplib)
+
+# Option B: Third-party email services (uncomment as needed)
+# sendgrid>=6.10.0
+# mailgun>=2.0.0
+# boto3>=1.28.0  # For AWS SES
+
+# News/Web Scraping (for Google News and RSS)
+requests>=2.31.0
+feedparser>=6.0.10
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# HTML Processing
+html2text>=2020.1.16
+
+# Utilities
+python-dotenv>=1.0.0
+
