@@ -25,9 +25,8 @@ admin_modules/
 ├── export_import.py            # Excel export/import
 └── github_admin.py              # GitHub operations for admin
 
-onboarding_app/                   # Separate onboarding webpage
-├── streamlit_onboarding_app.py  # Customer-facing onboarding form
-└── onboarding_storage.py        # Store/retrieve onboarding submissions
+# Note: Onboarding is now integrated into Admin App (GNP_Admin)
+# No separate onboarding_app needed
 ```
 
 ### Function Mapping by Feature:

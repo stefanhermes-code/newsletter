@@ -1,14 +1,21 @@
 """
-User Application (Multi-Tenant)
+User Application (Multi-Tenant) - GlobalNewsPilot
 
 Newsletter generation application where users can switch between multiple newsletters.
 """
 
 import streamlit as st
+from user_modules import customer_selector
+from user_modules import news_finder
+from user_modules import article_dashboard
+from user_modules import newsletter_generator
+from user_modules import config_manager
+from user_modules.github_user import list_newsletters, get_newsletter_content
+from datetime import datetime
 
 # Page configuration (will be updated when customer is selected)
 st.set_page_config(
-    page_title="Newsletter Tool",
+    page_title="GlobalNewsPilot",
     page_icon="📰",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -24,25 +31,22 @@ if 'current_customer_id' not in st.session_state:
 if 'user_newsletters' not in st.session_state:
     st.session_state.user_newsletters = []
 
-def get_user_email():
-    """Get user email - placeholder for now"""
-    # TODO: Implement email input or authentication
-    if st.session_state.user_email is None:
-        return None
-    return st.session_state.user_email
+if 'selected_article_ids' not in st.session_state:
+    st.session_state.selected_article_ids = set()
 
-def get_user_newsletters(user_email):
-    """Get user's accessible newsletters - placeholder"""
-    # TODO: Implement GitHub API call to scan user_access.json files
-    return []
+if 'found_articles' not in st.session_state:
+    st.session_state.found_articles = []
+
+if 'is_finding_news' not in st.session_state:
+    st.session_state.is_finding_news = False
 
 def main():
-    # Get user email (placeholder - will be implemented)
-    user_email = get_user_email()
+    # Get user email
+    user_email = customer_selector.get_user_email()
     
     # If no email, show login/email input
     if user_email is None:
-        st.title("Newsletter Tool")
+        st.title("📰 GlobalNewsPilot")
         st.header("Welcome!")
         
         with st.form("user_email_form"):
@@ -50,51 +54,38 @@ def main():
             submitted = st.form_submit_button("Continue", type="primary")
             
             if submitted and email:
-                st.session_state.user_email = email
+                customer_selector.set_user_email(email)
                 st.rerun()
         
         st.info("Enter your email to access your newsletters")
         return
     
     # Get user's accessible newsletters
-    user_newsletters = get_user_newsletters(user_email)
+    user_newsletters = customer_selector.get_user_newsletters(user_email)
     
     if not user_newsletters:
         st.title("No Newsletters Available")
         st.warning("You don't have access to any newsletters yet. Please contact your administrator.")
         return
     
+    # Store newsletters in session state
+    st.session_state.user_newsletters = user_newsletters
+    
     # Newsletter selector (always visible in sidebar)
     st.sidebar.title("📰 Newsletter")
     
-    newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
-    newsletter_names = list(newsletter_options.keys())
-    
-    # Determine current newsletter index
-    if st.session_state.current_customer_id:
-        current_index = next((i for i, n in enumerate(user_newsletters) 
-                            if n['customer_id'] == st.session_state.current_customer_id), 0)
-    else:
-        current_index = 0
-        st.session_state.current_customer_id = user_newsletters[0]['customer_id']
-    
-    # Newsletter selector dropdown
-    selected_name = st.sidebar.selectbox(
-        "Switch Newsletter",
-        newsletter_names,
-        index=current_index,
-        key="newsletter_selector"
+    # Use customer_selector module for newsletter selection
+    current_customer_id = customer_selector.render_newsletter_selector(
+        user_newsletters,
+        customer_selector.get_current_customer()
     )
     
-    # Update current customer if selection changed
-    new_customer_id = newsletter_options[selected_name]
-    if new_customer_id != st.session_state.current_customer_id:
-        st.session_state.current_customer_id = new_customer_id
-        st.rerun()
+    if not current_customer_id:
+        current_customer_id = user_newsletters[0]['customer_id'] if user_newsletters else None
     
     # Get current newsletter info
     current_newsletter = next((n for n in user_newsletters 
-                              if n['customer_id'] == st.session_state.current_customer_id), None)
+                              if n['customer_id'] == current_customer_id), None)
     
     if current_newsletter:
         # Show tier indicator
@@ -105,35 +96,42 @@ def main():
     # Main navigation
     available_pages = ["Dashboard", "Newsletters"]
     
-    # Check if user has config edit permission (placeholder)
-    has_edit_config = current_newsletter and current_newsletter.get('permissions', []).count('edit_config') > 0
+    # Check if user has config edit permission
+    has_edit_config = customer_selector.has_permission(user_email, current_customer_id, "edit_config")
     if has_edit_config:
         available_pages.append("Configuration")
     
     page = st.sidebar.selectbox("Navigation", available_pages)
     
-    # Load customer config (placeholder)
-    customer_config = {}  # TODO: Load from GitHub
+    # Load customer config
+    customer_config = customer_selector.load_customer_config(current_customer_id)
+    
+    # Update page title based on branding
+    if customer_config.get('branding', {}).get('application_name'):
+        branding_name = customer_config['branding']['application_name']
+        st.set_page_config(page_title=branding_name, layout="wide")
     
     # Main content area
     if page == "Dashboard":
-        render_dashboard(customer_config, current_newsletter)
+        render_dashboard(customer_config, current_newsletter, user_email, current_customer_id)
     elif page == "Newsletters":
-        render_newsletters_viewer(st.session_state.current_customer_id, current_newsletter)
+        render_newsletters_viewer(current_customer_id, current_newsletter, user_email)
     elif page == "Configuration":
         if has_edit_config:
-            render_configuration(st.session_state.current_customer_id, current_newsletter)
+            render_configuration(current_customer_id, user_email)
         else:
             st.error("You don't have permission to edit configuration. Premium tier required.")
 
-def render_dashboard(customer_config, user_permissions):
+def render_dashboard(customer_config, current_newsletter, user_email, customer_id):
     """Main dashboard - news finding and newsletter generation"""
-    st.title(f"Dashboard - {customer_config.get('branding', {}).get('application_name', 'Newsletter')}")
+    branding = customer_config.get('branding', {})
+    app_name = branding.get('application_name', 'Newsletter')
     
-    st.info("Dashboard functionality - Coming soon")
+    st.title(f"Dashboard - {app_name}")
     
     # News Finding Section
     st.header("📰 Find News")
+    
     col1, col2 = st.columns([3, 1])
     
     with col1:
@@ -146,55 +144,164 @@ def render_dashboard(customer_config, user_permissions):
     with col2:
         st.write("")
         st.write("")
-        find_button = st.button("🔍 Find News", type="primary", disabled=True)
+        find_button = st.button("🔍 Find News", type="primary")
     
-    if find_button:
-        st.success("Finding news... (Functionality coming soon)")
+    # Find news functionality
+    if find_button or st.session_state.is_finding_news:
+        if not st.session_state.is_finding_news:
+            st.session_state.is_finding_news = True
+        
+        with st.spinner("Finding news articles..."):
+            # Get keywords and feeds
+            keywords = [k for k in config_manager.load_keywords(customer_id) if k]
+            feeds_config = config_manager.load_feeds(customer_id)
+            feed_urls = [f['url'] for f in feeds_config if f.get('enabled', True)]
+            
+            # Progress callback
+            status_placeholder = st.empty()
+            
+            def progress_callback(message):
+                status_placeholder.info(message)
+            
+            # Find news
+            articles = news_finder.find_news_background(
+                keywords=keywords,
+                feed_urls=feed_urls,
+                time_period=time_period,
+                progress_callback=progress_callback
+            )
+            
+            st.session_state.found_articles = articles
+            st.session_state.is_finding_news = False
+            status_placeholder.empty()
     
     st.markdown("---")
     
     # Article Dashboard
-    st.header("Articles")
-    st.info("Article dashboard will appear here")
+    st.header("📋 Articles")
+    
+    # Show selected articles summary in sidebar
+    if st.session_state.found_articles:
+        selected_articles_list = article_dashboard.show_selected_summary(
+            st.session_state.selected_article_ids,
+            st.session_state.found_articles
+        )
+    
+    # Display articles
+    if st.session_state.found_articles:
+        updated_selection = article_dashboard.display_articles(
+            st.session_state.found_articles,
+            st.session_state.selected_article_ids
+        )
+        st.session_state.selected_article_ids = updated_selection
+    else:
+        st.info("Click 'Find News' to search for articles based on your keywords and RSS feeds.")
     
     st.markdown("---")
     
     # Newsletter Generation
-    st.header("Generate Newsletter")
+    st.header("📰 Generate Newsletter")
     
     # Check if user has generate permission
-    can_generate = user_permissions and 'generate' in user_permissions.get('permissions', [])
+    can_generate = current_newsletter and 'generate' in current_newsletter.get('permissions', [])
     
     if can_generate:
-        selected_count = st.number_input("Selected Articles", value=0, disabled=True)
-        generate_button = st.button("📰 Generate Newsletter", type="primary", disabled=True)
-        if generate_button:
-            st.success("Generating newsletter... (Functionality coming soon)")
+        selected_count = len(st.session_state.selected_article_ids)
+        st.write(f"**{selected_count} articles selected**")
+        
+        if selected_count == 0:
+            st.warning("Please select at least one article to generate a newsletter.")
+        else:
+            # Get short name from branding or customer_id
+            # Check if there's a 'short_name' in branding config (might be in a different structure)
+            short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
+            
+            generate_button = st.button("📰 Generate Newsletter", type="primary")
+            
+            if generate_button:
+                # Get selected articles
+                selected_articles = article_dashboard.select_articles(
+                    list(st.session_state.selected_article_ids),
+                    st.session_state.found_articles
+                )
+                
+                if selected_articles:
+                    with st.spinner("Generating newsletter..."):
+                        filename = newsletter_generator.generate_newsletter(
+                            selected_articles=selected_articles,
+                            branding=branding,
+                            customer_id=customer_id,
+                            short_name=short_name
+                        )
+                        
+                        if filename:
+                            st.success(f"Newsletter generated and saved: {filename}")
+                            
+                            # Get newsletter content for preview/download
+                            newsletter_html = newsletter_generator.get_newsletter_preview(
+                                selected_articles,
+                                branding
+                            )
+                            
+                            st.markdown("### Newsletter Preview")
+                            st.components.v1.html(newsletter_html, height=600, scrolling=True)
+                            
+                            newsletter_generator.download_newsletter(newsletter_html, filename)
+                            
+                            # Clear selection after generation
+                            st.session_state.selected_article_ids = set()
+                else:
+                    st.error("Failed to retrieve selected articles.")
     else:
         st.warning("You don't have permission to generate newsletters. Standard or Premium tier required.")
 
-def render_newsletters_viewer(customer_id, user_permissions):
+def render_newsletters_viewer(customer_id, current_newsletter, user_email):
     """View generated newsletters"""
-    st.title("Generated Newsletters")
-    st.info("Newsletter viewer - Coming soon")
+    st.title("📰 Generated Newsletters")
     
-    st.write(f"Newsletters for customer: {customer_id}")
-    st.write("Newsletter list will appear here")
+    # Load newsletters from GitHub
+    newsletters = list_newsletters(customer_id)
+    
+    if not newsletters:
+        st.info("No newsletters generated yet. Go to Dashboard to create your first newsletter.")
+        return
+    
+    st.write(f"**{len(newsletters)} newsletter(s) found**")
+    st.markdown("---")
+    
+    # Display newsletters
+    for newsletter in newsletters:
+        with st.container():
+            col1, col2, col3 = st.columns([3, 1, 1])
+            
+            with col1:
+                st.markdown(f"### {newsletter['name']}")
+                st.caption(f"Last modified: {newsletter.get('last_modified', 'Unknown')}")
+                st.caption(f"Size: {newsletter.get('size', 0)} bytes")
+            
+            with col2:
+                # View button
+                if st.button("👁️ View", key=f"view_{newsletter['name']}"):
+                    content = get_newsletter_content(customer_id, newsletter['name'])
+                    if content:
+                        st.markdown("### Newsletter Preview")
+                        st.components.v1.html(content, height=600, scrolling=True)
+            
+            with col3:
+                # Download button
+                st.download_button(
+                    label="📥 Download",
+                    data=get_newsletter_content(customer_id, newsletter['name']) or "",
+                    file_name=newsletter['name'],
+                    mime="text/html",
+                    key=f"download_{newsletter['name']}"
+                )
+            
+            st.markdown("---")
 
-def render_configuration(customer_id, user_permissions):
+def render_configuration(customer_id, user_email):
     """Configuration management (only if user has edit_config permission)"""
-    st.title("Configuration")
-    st.info("Configuration editor - Coming soon")
-    
-    tab1, tab2 = st.tabs(["Keywords", "RSS Feeds"])
-    
-    with tab1:
-        st.write("Keywords configuration will appear here")
-        st.write("(Editable - user has edit_config permission)")
-    
-    with tab2:
-        st.write("RSS feeds configuration will appear here")
-        st.write("(Editable - user has edit_config permission)")
+    config_manager.render_configuration_page(customer_id, user_email)
 
 if __name__ == "__main__":
     main()

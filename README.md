@@ -1,15 +1,18 @@
-# Newsletter Tool Cloud
+# Newsletter Tool Cloud (GlobalNewsPilot)
 
 Multi-tenant newsletter generation application built with Streamlit.
+
+## Applications
+
+- **GlobalNewsPilot** (`globalnewspilot`) - Multi-tenant User App for newsletter generation
+- **GNP_Admin** (`GNP_Admin`) - Admin Dashboard for customer management and monitoring
 
 ## Repository Structure
 
 - `admin_modules/` - Admin dashboard modules
 - `user_modules/` - User app modules
-- `onboarding_app/` - Customer onboarding application
-- `streamlit_admin_app.py` - Admin dashboard entry point
-- `streamlit_user_app.py` - User application entry point (multi-tenant)
-- `streamlit_onboarding_app.py` - Onboarding application entry point
+- `streamlit_admin_app.py` - Admin dashboard entry point (GNP_Admin)
+- `streamlit_user_app.py` - User application entry point (GlobalNewsPilot - multi-tenant)
 - `customers/` - Customer-specific data and configurations
 
 ## Setup
@@ -22,9 +25,8 @@ Multi-tenant newsletter generation application built with Streamlit.
 2. Configure Streamlit secrets (see Design Document)
 
 3. Deploy to Streamlit Cloud:
-   - Admin App: Deploy `streamlit_admin_app.py`
-   - User App: Deploy `streamlit_user_app.py` (one-time, multi-tenant)
-   - Onboarding App: Deploy `streamlit_onboarding_app.py`
+   - **GNP_Admin**: Deploy `streamlit_admin_app.py`
+   - **GlobalNewsPilot**: Deploy `streamlit_user_app.py` (one-time, multi-tenant deployment)
 
 ## Documentation
 
@@ -35,11 +37,11 @@ Multi-tenant newsletter generation application built with Streamlit.
 
 ## Features
 
-- Multi-tenant architecture (one User App for all customers)
+- Multi-tenant architecture (one GlobalNewsPilot app for all customers)
 - Multi-user support with payment tier-based permissions
-- Customer onboarding via web form
+- Customer onboarding integrated in GNP_Admin
 - Newsletter generation from Google News and RSS feeds
-- Admin dashboard for customer and configuration management
+- Admin dashboard (GNP_Admin) for customer and configuration management
 
 ## Repository
 
