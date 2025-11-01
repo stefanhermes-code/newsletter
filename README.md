@@ -22,11 +22,15 @@ Multi-tenant newsletter generation application built with Streamlit.
    pip install -r requirements.txt
    ```
 
-2. Configure Streamlit secrets (see Design Document)
+2. **Configure Streamlit Secrets** (REQUIRED):
+   - See [Streamlit Secrets Setup Guide](./STREAMLIT_SECRETS_SETUP.md)
+   - Required secrets:
+     - `github_token` - GitHub Personal Access Token (with `repo` permissions)
+     - `github_repo` - Repository name (e.g., `"stefanhermes-code/newsletter"`)
 
 3. Deploy to Streamlit Cloud:
    - **GNP_Admin**: Deploy `streamlit_admin_app.py`
-   - **GlobalNewsPilot**: Deploy `streamlit_user_app.py` (one-time, multi-tenant deployment)
+   - **GlobalNewsPilot (gnpuser)**: Deploy `streamlit_user_app.py` (one-time, multi-tenant deployment)
 
 ## Documentation
 

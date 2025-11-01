@@ -20,14 +20,23 @@ logger = logging.getLogger(__name__)
 def get_github_client():
     """Initialize and return GitHub client using Streamlit secrets"""
     try:
+        # Check if secrets exist
+        if not hasattr(st, 'secrets') or not st.secrets:
+            st.error("⚠️ Streamlit secrets not configured. Please add secrets in Streamlit Cloud settings.")
+            st.info("Required secrets: `github_token` and `github_repo`")
+            return None
+        
         github_token = st.secrets.get("github_token")
         if not github_token:
-            raise ValueError("github_token not found in Streamlit secrets")
+            st.error("⚠️ `github_token` not found in Streamlit secrets.")
+            st.info("Please add your GitHub Personal Access Token in Streamlit Cloud → Settings → Secrets")
+            return None
         
         return Github(github_token)
     except Exception as e:
         logger.error(f"Failed to initialize GitHub client: {e}")
-        st.error("Failed to connect to GitHub. Please check your configuration.")
+        st.error(f"⚠️ Failed to connect to GitHub: {str(e)}")
+        st.info("Please check that your GitHub token is valid and has 'repo' permissions.")
         return None
 
 @st.cache_resource
