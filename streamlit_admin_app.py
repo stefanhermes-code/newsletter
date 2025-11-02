@@ -10,6 +10,7 @@ from admin_modules import config_viewer
 from admin_modules import activity_monitor
 from admin_modules import analytics_engine
 from admin_modules import export_import
+from admin_modules import admin_auth
 from admin_modules.github_admin import list_all_customers
 
 # Page configuration
@@ -25,6 +26,19 @@ if 'current_customer_id' not in st.session_state:
     st.session_state.current_customer_id = None
 
 def main():
+    # Check authentication
+    if not admin_auth.check_admin_authentication():
+        admin_auth.render_login_page()
+        return
+    
+    # Show logout button in sidebar
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Logout", key="admin_logout"):
+        admin_auth.logout_admin()
+        return
+    
+    if st.session_state.get('admin_username'):
+        st.sidebar.caption(f"Logged in as: **{st.session_state.admin_username}**")
     # Sidebar navigation
     st.sidebar.title("📊 Admin Dashboard")
     st.sidebar.markdown("---")

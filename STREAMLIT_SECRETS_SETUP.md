@@ -42,12 +42,21 @@ github_repo = "stefanhermes-code/newsletter"
 
 ### Complete Secrets Configuration:
 
-In your Streamlit Cloud Secrets (`.streamlit/secrets.toml`), it should look like this:
-
+**For User App (gnpuser):**
 ```toml
 github_token = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 github_repo = "stefanhermes-code/newsletter"
 ```
+
+**For Admin App (gnp-backend):**
+```toml
+github_token = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+github_repo = "stefanhermes-code/newsletter"
+admin_username = "admin"
+admin_password = "your_secure_admin_password_here"
+```
+
+**Note:** Set a strong password for `admin_password` in the Admin App secrets!
 
 ### After Adding Secrets:
 
