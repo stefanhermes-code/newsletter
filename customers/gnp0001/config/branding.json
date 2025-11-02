@@ -1,8 +1,10 @@
 {
   "application_name": "HTC Newsletter",
-  "short_name": "HTC",
   "newsletter_title_template": "{name} - Week {week}",
   "footer_text": "Powered by GlobalNewsPilot",
   "footer_url": "https://www.htcglobal.asia",
-  "footer_url_display": ""
+  "footer_url_display": "Website HTC Global",
+  "short_name": "HTC",
+  "last_updated": "stefan.hermes@htcglobal.asia",
+  "updated_at": "2025-11-02T09:49:16.370337"
 }
