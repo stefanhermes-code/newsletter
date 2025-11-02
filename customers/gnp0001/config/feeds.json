@@ -1,5 +1,156 @@
 {
-  "feeds": [],
-  "last_updated": "system",
-  "updated_at": "2025-11-02T07:16:01.972686"
+  "feeds": [
+    {
+      "name": "polyurethanes.org",
+      "url": "https://www.polyurethanes.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "urethane.org",
+      "url": "https://www.urethane.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "pu-world.com",
+      "url": "https://www.pu-world.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "plasticstoday.com",
+      "url": "https://www.plasticstoday.com/polyurethane/rss.xml",
+      "enabled": true
+    },
+    {
+      "name": "chemicals-technology.com",
+      "url": "https://www.chemicals-technology.com/category/polymers/polyurethane/feed/",
+      "enabled": true
+    },
+    {
+      "name": "european-pu.com",
+      "url": "https://www.european-pu.com/news/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneblog.com",
+      "url": "https://www.polyurethaneblog.com/feed/",
+      "enabled": true
+    },
+    {
+      "name": "utech-polyurethane.com",
+      "url": "https://www.utech-polyurethane.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "pu-magazine.com",
+      "url": "https://www.pu-magazine.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "insulation.org",
+      "url": "https://www.insulation.org/rss/",
+      "enabled": true
+    },
+    {
+      "name": "materialstoday.com",
+      "url": "https://www.materialstoday.com/polymers/polyurethane/rss/",
+      "enabled": true
+    },
+    {
+      "name": "specialchem.com",
+      "url": "https://www.specialchem.com/polyurethane-central/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethane-systems.com",
+      "url": "https://www.polyurethane-systems.com/news/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethanefoam.org",
+      "url": "https://www.polyurethanefoam.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "bpf.co.uk",
+      "url": "https://www.bpf.co.uk/polyurethane/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethane-europe.org",
+      "url": "https://www.polyurethane-europe.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "rigidfoam.com",
+      "url": "https://www.rigidfoam.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneinsulation.org",
+      "url": "https://www.polyurethaneinsulation.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "polyurethane.org.au",
+      "url": "https://www.polyurethane.org.au/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneasia.com",
+      "url": "https://www.polyurethaneasia.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneconference.com",
+      "url": "https://www.polyurethaneconference.com/feed/",
+      "enabled": true
+    },
+    {
+      "name": "polyurethanemarket.com",
+      "url": "https://www.polyurethanemarket.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "chemicalweekly.com",
+      "url": "https://www.chemicalweekly.com/polyurethane/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethane-recycling.org",
+      "url": "https://www.polyurethane-recycling.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "polyurethane-sustainability.org",
+      "url": "https://www.polyurethane-sustainability.org/rss",
+      "enabled": true
+    },
+    {
+      "name": "pu-additives.com",
+      "url": "https://www.pu-additives.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneautomotive.com",
+      "url": "https://www.polyurethaneautomotive.com/feed/",
+      "enabled": true
+    },
+    {
+      "name": "pu-furniture.com",
+      "url": "https://www.pu-furniture.com/rss",
+      "enabled": true
+    },
+    {
+      "name": "polyurethaneconstruction.org",
+      "url": "https://www.polyurethaneconstruction.org/feed/",
+      "enabled": true
+    },
+    {
+      "name": "polyurethanecoatings.org",
+      "url": "https://www.polyurethanecoatings.org/rss",
+      "enabled": true
+    }
+  ],
+  "last_updated": "migration",
+  "updated_at": "2025-01-16T00:00:00"
 }
