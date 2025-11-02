@@ -378,15 +378,15 @@ def render_customer_onboarding():
                                                           key="form_application_name")
                     newsletter_title_template_input = st.text_input("Newsletter Title Template",
                                                                    value=st.session_state.get('onboarding_data', {}).get('newsletter_title_template', '{name} - Week {week}'),
-                                                                   help="Use {name} and {week} as placeholders",
+                                                                   help="Template for newsletter titles. Use {name} for application name and {week} for week number. Example: '{name} - Week {week}' or '{name} Newsletter Week {week}'. This is optional - default is '{name} - Week {week}'.",
                                                                    key="form_title_template")
-                    footer_text_input = st.text_input("Footer Text *",
+                    footer_text_input = st.text_input("Footer Text",
                                                      value=st.session_state.get('onboarding_data', {}).get('footer_text', ''),
-                                                     help="Text that appears at bottom of newsletters",
+                                                     help="Optional: Text that appears at bottom of newsletters",
                                                      key="form_footer_text")
-                    footer_url_input = st.text_input("Footer URL *",
+                    footer_url_input = st.text_input("Footer URL",
                                                     value=st.session_state.get('onboarding_data', {}).get('footer_url', ''),
-                                                    help="Company website URL",
+                                                    help="Optional: Company website URL for footer link",
                                                     key="form_footer_url")
                     footer_url_display_input = st.text_input("Footer URL Display Text",
                                                              value=st.session_state.get('onboarding_data', {}).get('footer_url_display', ''),
@@ -477,17 +477,14 @@ def render_customer_onboarding():
                             st.error(app_error)
                             st.stop()
                         
-                        is_valid_footer, footer_error = validate_required_field(footer_text, "Footer Text")
-                        if not is_valid_footer:
-                            st.error(footer_error)
-                            st.stop()
+                        # Footer fields are optional - only validate URL format if provided
+                        if footer_url:
+                            is_valid_url, url_error = validate_url(footer_url, "Footer URL")
+                            if not is_valid_url:
+                                st.error(url_error)
+                                st.stop()
                         
-                        is_valid_url, url_error = validate_url(footer_url, "Footer URL")
-                        if not is_valid_url:
-                            st.error(url_error)
-                            st.stop()
-                        
-                        # Save validated data
+                        # Save validated data (footer fields can be empty)
                         st.session_state.onboarding_data['application_name'] = application_name
                         st.session_state.onboarding_data['newsletter_title_template'] = st.session_state.get('form_title_template', '{name} - Week {week}').strip()
                         st.session_state.onboarding_data['footer_text'] = footer_text
