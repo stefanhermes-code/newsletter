@@ -51,6 +51,12 @@ def authenticate_admin(username: str, password: str) -> Tuple[bool, str]:
 
 def render_login_page():
     """Render admin login page"""
+    # Display GNP logo at top
+    try:
+        st.image("assets/GNP Logo.png", use_container_width=True)
+    except:
+        pass  # If logo not found, continue without it
+    
     st.title("🔐 Admin Dashboard - Login")
     st.markdown("Please enter your admin credentials to access the dashboard.")
     
