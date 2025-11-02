@@ -11,6 +11,7 @@ from github.GithubException import GithubException
 import json
 import logging
 from typing import Dict, List, Optional, Any
+from datetime import datetime
 import os
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,31 @@ def load_config(customer_id: str, config_type: str) -> Optional[Dict]:
         except GithubException as e:
             if e.status == 404:
                 logger.warning(f"Config file not found: {config_path}")
+                # Auto-create missing config files with default empty values
+                default_configs = {
+                    "keywords": {"keywords": [], "last_updated": "system", "updated_at": datetime.now().isoformat()},
+                    "feeds": {"feeds": [], "last_updated": "system", "updated_at": datetime.now().isoformat()},
+                    "branding": {
+                        "application_name": "",
+                        "newsletter_title_template": "{name} - Week {week}",
+                        "footer_text": "",
+                        "footer_url": "",
+                        "footer_url_display": ""
+                    }
+                }
+                
+                if config_type in default_configs:
+                    logger.info(f"Auto-creating missing {config_type}.json for {customer_id}")
+                    default_data = default_configs[config_type]
+                    # Use save_config_auto to create the file (defined later in this module)
+                    if save_config_auto(customer_id, config_type, default_data, f"Auto-create missing {config_type} config"):
+                        # Return the default data
+                        return default_data
+                    else:
+                        # If save failed, still return default so app doesn't crash
+                        logger.error(f"Failed to auto-create {config_type}.json, returning default")
+                        return default_data
+                
                 return None
             raise
     
