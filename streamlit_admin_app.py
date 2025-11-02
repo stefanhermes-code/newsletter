@@ -72,38 +72,19 @@ def main():
         default_index = 0
         st.session_state.current_admin_page = page
     
-    # Use session state to control selectbox value directly
-    # This ensures button clicks take priority over widget state
-    selectbox_key = "admin_nav_selectbox"
+    # Render selectbox using index based on current page
+    # Streamlit manages widget state internally - we can't set it directly
+    selected_page = st.sidebar.selectbox(
+        "Navigation",
+        nav_options,
+        index=default_index,
+        key="admin_nav_selectbox"
+    )
     
-    # If we're forcing a page change, update the selectbox state
-    if selectbox_key in st.session_state:
-        # Check if session state page differs from selectbox state
-        if st.session_state.current_admin_page != st.session_state.get(selectbox_key):
-            # Force selectbox to match session state
-            st.session_state[selectbox_key] = st.session_state.current_admin_page
-    
-    # Render selectbox - will use session state if key exists, otherwise use index
-    if selectbox_key in st.session_state and st.session_state[selectbox_key] in nav_options:
-        # Use value from session state
-        selected_page = st.sidebar.selectbox(
-            "Navigation",
-            nav_options,
-            index=nav_options.index(st.session_state[selectbox_key]),
-            key=selectbox_key
-        )
-    else:
-        # First time - use index
-        selected_page = st.sidebar.selectbox(
-            "Navigation",
-            nav_options,
-            index=default_index,
-            key=selectbox_key
-        )
-    
-    # Update session state if user manually changed selection
-    if selected_page != st.session_state.get('current_admin_page'):
+    # Update session state if user manually changed selection in sidebar
+    if selected_page != page:
         st.session_state.current_admin_page = selected_page
+        page = selected_page
     
     # Final check: ensure page variable matches session state
     page = st.session_state.current_admin_page
@@ -169,8 +150,6 @@ def render_overview():
         if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
             # Directly set the page
             st.session_state.current_admin_page = "Customer Onboarding"
-            # Also sync selectbox widget state
-            st.session_state.admin_nav_selectbox = "Customer Onboarding"
             # Reset onboarding step when starting fresh
             if 'onboarding_step' in st.session_state:
                 del st.session_state.onboarding_step
@@ -210,8 +189,6 @@ def render_customer_management():
             if st.button("➕ Add New Customer", type="primary", key="add_customer_from_list"):
                 # Directly set the page - more reliable than redirect
                 st.session_state.current_admin_page = "Customer Onboarding"
-                # Also sync selectbox widget state
-                st.session_state.admin_nav_selectbox = "Customer Onboarding"
                 # Reset onboarding step when starting fresh
                 if 'onboarding_step' in st.session_state:
                     del st.session_state.onboarding_step
