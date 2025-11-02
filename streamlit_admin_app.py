@@ -141,9 +141,47 @@ def render_customer_management():
     """Customer Management page"""
     st.header("Customer Management")
     
-    tab1, tab2, tab3 = st.tabs(["Customer List", "Customer Details", "User Access Management"])
+    # Initialize tab state
+    if 'customer_management_tab' not in st.session_state:
+        st.session_state.customer_management_tab = "Customer List"
     
-    with tab1:
+    # Get requested tab (from button click or existing state)
+    requested_tab = st.session_state.get('customer_management_tab', "Customer List")
+    tab_options = ["Customer List", "Customer Details", "User Access Management"]
+    
+    # Calculate index for radio button
+    if requested_tab in tab_options:
+        default_index = tab_options.index(requested_tab)
+    else:
+        default_index = 0
+    
+    # Tab selector (allows programmatic switching via buttons)
+    selected_tab = st.radio(
+        "View",
+        tab_options,
+        horizontal=True,
+        key="customer_mgmt_tab_selector",
+        index=default_index
+    )
+    
+    # Update session state with selected tab
+    st.session_state.customer_management_tab = selected_tab
+    
+    # Render appropriate view
+    if selected_tab == "Customer List":
+        tab1 = True
+        tab2 = False
+        tab3 = False
+    elif selected_tab == "Customer Details":
+        tab1 = False
+        tab2 = True
+        tab3 = False
+    else:  # User Access Management
+        tab1 = False
+        tab2 = False
+        tab3 = True
+    
+    if tab1:
         st.subheader("All Customers")
         
         st.markdown("---")
@@ -186,7 +224,7 @@ def render_customer_management():
         else:
             st.info("No customers found. Use 'Customer Onboarding' to create your first customer.")
     
-    with tab2:
+    if tab2:
         st.subheader("Customer Details")
         
         # Customer selector
@@ -236,7 +274,7 @@ def render_customer_management():
             else:
                 st.error("Failed to load customer details")
     
-    with tab3:
+    if tab3:
         st.subheader("User Access Management")
         
         # Customer selector
