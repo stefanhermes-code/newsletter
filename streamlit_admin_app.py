@@ -127,20 +127,6 @@ def render_overview():
     
     st.markdown("---")
     
-    # Quick action - Add New Customer
-    if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
-        # Set page - this matches exactly what selectbox does
-        st.session_state.current_admin_page = "Customer Onboarding"
-        # Clear onboarding state
-        if 'onboarding_step' in st.session_state:
-            del st.session_state.onboarding_step
-        if 'onboarding_data' in st.session_state:
-            del st.session_state.onboarding_data
-        # Rerun to apply the change (same as selectbox change)
-        st.rerun()
-    
-    st.markdown("---")
-    
     # Recent customers
     if all_customers:
         st.subheader("Recent Customers")
@@ -149,7 +135,7 @@ def render_overview():
         for customer in display_customers:
             st.write(f"**{customer.get('company_name', customer.get('customer_id'))}** - {customer.get('status', 'Unknown')}")
     else:
-        st.info("No customers yet. Click 'Add New Customer' to create your first customer.")
+        st.info("No customers yet. Go to 'Customer Onboarding' in the sidebar to create your first customer.")
 
 def render_customer_management():
     """Customer Management page"""
@@ -159,17 +145,6 @@ def render_customer_management():
     
     with tab1:
         st.subheader("All Customers")
-        
-        # Add new customer button
-        col_add, col_empty = st.columns([1, 4])
-        with col_add:
-            if st.button("➕ Add New Customer", type="primary", key="add_customer_from_list"):
-                st.session_state.current_admin_page = "Customer Onboarding"
-                if 'onboarding_step' in st.session_state:
-                    del st.session_state.onboarding_step
-                if 'onboarding_data' in st.session_state:
-                    del st.session_state.onboarding_data
-                st.rerun()
         
         st.markdown("---")
         
