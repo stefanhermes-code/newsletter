@@ -224,25 +224,30 @@ def create_customer_record(customer_data: Dict) -> bool:
             "footer_url_display": customer_data.get("footer_url_display", "")
         }
         from admin_modules.github_admin import update_customer_config
-        update_customer_config(customer_id, "branding", branding)
         
-        # Create keywords.json (if provided)
-        if customer_data.get("keywords"):
-            keywords_data = {
-                "keywords": customer_data.get("keywords", []),
-                "last_updated": "admin",
-                "updated_at": datetime.now().isoformat()
-            }
-            update_customer_config(customer_id, "keywords", keywords_data)
+        # Create branding.json
+        if not update_customer_config(customer_id, "branding", branding, f"Admin: Create branding for {customer_id}"):
+            st.warning(f"Warning: Failed to create branding.json for {customer_id}")
         
-        # Create feeds.json (if provided)
-        if customer_data.get("feeds"):
-            feeds_data = {
-                "feeds": customer_data.get("feeds", []),
-                "last_updated": "admin",
-                "updated_at": datetime.now().isoformat()
-            }
-            update_customer_config(customer_id, "feeds", feeds_data)
+        # Create keywords.json (always create, even if empty)
+        keywords_data = {
+            "keywords": customer_data.get("keywords", []),
+            "last_updated": "admin",
+            "updated_at": datetime.now().isoformat()
+        }
+        if not update_customer_config(customer_id, "keywords", keywords_data, f"Admin: Create keywords for {customer_id}"):
+            st.warning(f"Warning: Failed to create keywords.json for {customer_id}")
+        
+        # Create feeds.json (always create, even if empty)
+        feeds_data = {
+            "feeds": customer_data.get("feeds", []),
+            "last_updated": "admin",
+            "updated_at": datetime.now().isoformat()
+        }
+        if not update_customer_config(customer_id, "feeds", feeds_data, f"Admin: Create feeds for {customer_id}"):
+            st.warning(f"Warning: Failed to create feeds.json for {customer_id}")
+            # This is critical - return False if feeds.json creation fails
+            return False
         
         # Create user_access.json with initial user (if provided)
         if customer_data.get("contact_email"):
