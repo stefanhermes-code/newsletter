@@ -54,14 +54,16 @@ def main():
         "Export/Import"
     ]
     
-    # Check if redirected from another page
+    # Check if redirected from another page (from button clicks)
     redirect_page = st.session_state.get('admin_nav_page')
     if redirect_page and redirect_page in nav_options:
+        # Redirect takes priority - update current page immediately
         st.session_state.current_admin_page = redirect_page
         del st.session_state.admin_nav_page
-    
-    # Determine which page to show - prioritize session state over widget state
-    if 'current_admin_page' in st.session_state and st.session_state.current_admin_page in nav_options:
+        # Force page to redirect value
+        page = redirect_page
+        default_index = nav_options.index(redirect_page)
+    elif 'current_admin_page' in st.session_state and st.session_state.current_admin_page in nav_options:
         # Use saved page from session state
         default_index = nav_options.index(st.session_state.current_admin_page)
         page = st.session_state.current_admin_page
@@ -71,7 +73,7 @@ def main():
         page = nav_options[default_index]
         st.session_state.current_admin_page = page
     
-    # Render selectbox - use value parameter to force the value from session state
+    # Render selectbox with current page selected
     selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
@@ -84,7 +86,7 @@ def main():
         st.session_state.current_admin_page = selected_page
         page = selected_page
     
-    # Ensure page matches session state (defensive)
+    # Final defensive check: ensure page matches session state
     page = st.session_state.current_admin_page
     
     # Reset onboarding state if user navigated away from onboarding
