@@ -142,9 +142,6 @@ def main():
     if has_edit_config:
         available_pages.append("Configuration")
     
-    # All authenticated users can change their password via Settings
-    available_pages.append("Settings")
-    
     page = st.sidebar.selectbox("Navigation", available_pages)
     
     # Load customer config
@@ -165,9 +162,6 @@ def main():
             render_configuration(current_customer_id, user_email)
         else:
             st.error("You don't have permission to edit configuration. Premium tier required.")
-            st.info("Use the 'Settings' tab to change your password.")
-    elif page == "Settings":
-        render_settings(current_customer_id, user_email)
 
 def render_dashboard(customer_config, current_newsletter, user_email, customer_id):
     """Main dashboard - news finding and newsletter generation"""
@@ -295,8 +289,9 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                             
                             newsletter_generator.download_newsletter(newsletter_html, filename)
                             
-                            # Clear selection after generation
+                            # Clear selection after generation to prevent reusing articles
                             st.session_state.selected_article_ids = set()
+                            st.rerun()
                 else:
                     st.error("Failed to retrieve selected articles.")
     else:
@@ -348,21 +343,19 @@ def render_newsletters_viewer(customer_id, current_newsletter, user_email):
 
 def render_configuration(customer_id, user_email):
     """Configuration management (only if user has edit_config permission)"""
-    tab1, tab2, tab3 = st.tabs(["Keywords", "RSS Feeds", "Change Password"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Branding", "Keywords", "RSS Feeds", "Change Password"])
     
     with tab1:
-        config_manager.render_keywords_editor(customer_id, user_email)
+        config_manager.render_branding_editor(customer_id, user_email)
     
     with tab2:
-        config_manager.render_feeds_editor(customer_id, user_email)
+        config_manager.render_keywords_editor(customer_id, user_email)
     
     with tab3:
+        config_manager.render_feeds_editor(customer_id, user_email)
+    
+    with tab4:
         password_manager.render_password_change(customer_id, user_email)
-
-def render_settings(customer_id, user_email):
-    """Settings page (for all users - password change)"""
-    st.title("Settings")
-    password_manager.render_password_change(customer_id, user_email)
 
 if __name__ == "__main__":
     main()
