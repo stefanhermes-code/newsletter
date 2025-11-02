@@ -57,20 +57,50 @@ def main():
     # Check if redirected from another page
     redirect_page = st.session_state.get('admin_nav_page')
     if redirect_page and redirect_page in nav_options:
-        default_index = nav_options.index(redirect_page)
+        st.session_state.current_admin_page = redirect_page
         del st.session_state.admin_nav_page
-    else:
-        default_index = 0
     
-    page = st.sidebar.selectbox(
+    # Determine which page to show - prioritize session state over widget state
+    if 'current_admin_page' in st.session_state and st.session_state.current_admin_page in nav_options:
+        # Use saved page from session state
+        default_index = nav_options.index(st.session_state.current_admin_page)
+        page = st.session_state.current_admin_page
+    else:
+        # First time or no saved state - default to Overview
+        default_index = 0
+        page = nav_options[default_index]
+        st.session_state.current_admin_page = page
+    
+    # Render selectbox - use value parameter to force the value from session state
+    selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
-        index=default_index
+        index=default_index,
+        key="admin_nav_selectbox"
     )
     
-    # Initialize onboarding session state
-    if 'onboarding_data' not in st.session_state:
-        st.session_state.onboarding_data = {}
+    # If user manually changed selection in sidebar, update session state
+    if selected_page != st.session_state.get('current_admin_page'):
+        st.session_state.current_admin_page = selected_page
+        page = selected_page
+    
+    # Ensure page matches session state (defensive)
+    page = st.session_state.current_admin_page
+    
+    # Reset onboarding state if user navigated away from onboarding
+    if page != "Customer Onboarding":
+        if 'onboarding_step' in st.session_state:
+            # User navigated away - reset onboarding (but keep data in case they come back)
+            # Don't delete onboarding_data, just reset step
+            if 'onboarding_step' in st.session_state:
+                del st.session_state.onboarding_step
+    
+    # Initialize onboarding session state (only if on onboarding page or starting)
+    if page == "Customer Onboarding":
+        if 'onboarding_data' not in st.session_state:
+            st.session_state.onboarding_data = {}
+        if 'onboarding_step' not in st.session_state:
+            st.session_state.onboarding_step = 1
     
     # Main content area
     st.title("Newsletter Tool - Admin Dashboard")
@@ -323,17 +353,77 @@ def render_customer_onboarding():
         st.progress(progress)
         st.caption(f"Step {st.session_state.onboarding_step} of {len(steps)}: {steps[st.session_state.onboarding_step - 1]}")
         
-        with st.form(f"onboarding_form_step_{st.session_state.onboarding_step}"):
+        # Form key for this step
+        form_key = f"onboarding_form_step_{st.session_state.onboarding_step}"
+        
+        with st.form(form_key):
+            # Re-render the step content inside form for submission handling
             if st.session_state.onboarding_step == 1:
-                render_onboarding_step1_basic_info()
+                st.write("**Step 1: Basic Information**")
+                customer_id_input = st.text_input("Customer ID *", 
+                                                  help="Lowercase, alphanumeric only. Example: 'acme', 'htc', 'apba'",
+                                                  value=st.session_state.get('onboarding_data', {}).get('customer_id', ''),
+                                                  key="form_customer_id")
+                company_name_input = st.text_input("Company Name *",
+                                                  value=st.session_state.get('onboarding_data', {}).get('company_name', ''),
+                                                  key="form_company_name")
+                short_name_input = st.text_input("Short Name *",
+                                                value=st.session_state.get('onboarding_data', {}).get('short_name', ''),
+                                                help="Used in file names. Example: 'ACME', 'HTC'",
+                                                key="form_short_name")
             elif st.session_state.onboarding_step == 2:
-                render_onboarding_step2_branding()
+                st.write("**Step 2: Newsletter Branding**")
+                application_name_input = st.text_input("Application Name *",
+                                                      value=st.session_state.get('onboarding_data', {}).get('application_name', ''),
+                                                      help="What the newsletter will be called. Example: 'ACME Industry Newsletter'",
+                                                      key="form_application_name")
+                newsletter_title_template_input = st.text_input("Newsletter Title Template",
+                                                               value=st.session_state.get('onboarding_data', {}).get('newsletter_title_template', '{name} - Week {week}'),
+                                                               help="Use {name} and {week} as placeholders",
+                                                               key="form_title_template")
+                footer_text_input = st.text_input("Footer Text *",
+                                                 value=st.session_state.get('onboarding_data', {}).get('footer_text', ''),
+                                                 help="Text that appears at bottom of newsletters",
+                                                 key="form_footer_text")
+                footer_url_input = st.text_input("Footer URL *",
+                                                value=st.session_state.get('onboarding_data', {}).get('footer_url', ''),
+                                                help="Company website URL",
+                                                key="form_footer_url")
+                footer_url_display_input = st.text_input("Footer URL Display Text",
+                                                         value=st.session_state.get('onboarding_data', {}).get('footer_url_display', ''),
+                                                         help="Display text for footer link. Example: 'www.acme.com'",
+                                                         key="form_footer_url_display")
             elif st.session_state.onboarding_step == 3:
                 render_onboarding_step3_keywords()
             elif st.session_state.onboarding_step == 4:
                 render_onboarding_step4_feeds()
+                # Validate feeds if any were added
+                if 'feeds' in st.session_state.onboarding_data:
+                    from admin_modules.validators import validate_url
+                    feeds = st.session_state.onboarding_data.get('feeds', [])
+                    for feed in feeds:
+                        feed_url = feed.get('url', '')
+                        if feed_url:
+                            is_valid, error_msg = validate_url(feed_url, f"RSS Feed URL ({feed.get('name', 'Unnamed')})")
+                            if not is_valid:
+                                # Note: This will be caught when user tries to add feed, but also check on Next
+                                pass  # Already validated in render function
             elif st.session_state.onboarding_step == 5:
-                render_onboarding_step5_contact()
+                st.write("**Step 5: Contact & Subscription Information**")
+                contact_name_input = st.text_input("Contact Name *",
+                                                  value=st.session_state.get('onboarding_data', {}).get('contact_name', ''),
+                                                  key="form_contact_name")
+                contact_email_input = st.text_input("Contact Email *",
+                                                   value=st.session_state.get('onboarding_data', {}).get('contact_email', ''),
+                                                   help="This email will become the login account",
+                                                   key="form_contact_email")
+                subscription_tier_input = st.selectbox("Subscription Tier *",
+                                                       ["Premium", "Standard", "Basic"],
+                                                       index=["Premium", "Standard", "Basic"].index(st.session_state.get('onboarding_data', {}).get('subscription_tier', 'Premium')) if st.session_state.get('onboarding_data', {}).get('subscription_tier', 'Premium') in ["Premium", "Standard", "Basic"] else 0,
+                                                       key="form_tier")
+                phone_input = st.text_input("Phone Number",
+                                           value=st.session_state.get('onboarding_data', {}).get('phone', ''),
+                                           key="form_phone")
             elif st.session_state.onboarding_step == 6:
                 render_onboarding_step6_review()
             elif st.session_state.onboarding_step == 7:
@@ -341,15 +431,121 @@ def render_customer_onboarding():
             
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
+                back_clicked = False
                 if st.session_state.onboarding_step > 1:
-                    if st.form_submit_button("← Back"):
-                        st.session_state.onboarding_step -= 1
-                        st.rerun()
+                    back_clicked = st.form_submit_button("← Back")
             with col3:
+                next_clicked = False
                 if st.session_state.onboarding_step < len(steps):
-                    if st.form_submit_button("Next →", type="primary"):
-                        st.session_state.onboarding_step += 1
-                        st.rerun()
+                    next_clicked = st.form_submit_button("Next →", type="primary")
+            
+            # Handle form submission
+            if back_clicked:
+                st.session_state.onboarding_step -= 1
+                # Ensure we stay on Customer Onboarding page
+                st.session_state.current_admin_page = "Customer Onboarding"
+                st.rerun()
+            elif next_clicked:
+                # Save current step data before moving forward
+                if 'onboarding_data' not in st.session_state:
+                    st.session_state.onboarding_data = {}
+                
+                if st.session_state.onboarding_step == 1:
+                    # Validate required fields for step 1
+                    from admin_modules.validators import validate_customer_id, validate_required_field
+                    
+                    customer_id_raw = st.session_state.get('form_customer_id', '').strip()
+                    company_name = st.session_state.get('form_company_name', '').strip()
+                    short_name = st.session_state.get('form_short_name', '').strip()
+                    
+                    # Validate customer ID format
+                    is_valid_id, id_error = validate_customer_id(customer_id_raw)
+                    if not is_valid_id:
+                        st.error(id_error)
+                        st.stop()
+                    
+                    # Validate required fields
+                    is_valid_company, company_error = validate_required_field(company_name, "Company Name")
+                    if not is_valid_company:
+                        st.error(company_error)
+                        st.stop()
+                    
+                    is_valid_short, short_error = validate_required_field(short_name, "Short Name")
+                    if not is_valid_short:
+                        st.error(short_error)
+                        st.stop()
+                    
+                    # Save validated data
+                    st.session_state.onboarding_data['customer_id'] = customer_id_raw.lower()
+                    st.session_state.onboarding_data['company_name'] = company_name
+                    st.session_state.onboarding_data['short_name'] = short_name
+                elif st.session_state.onboarding_step == 2:
+                    # Validate required fields for step 2
+                    from admin_modules.validators import validate_required_field, validate_url
+                    
+                    application_name = st.session_state.get('form_application_name', '').strip()
+                    footer_text = st.session_state.get('form_footer_text', '').strip()
+                    footer_url = st.session_state.get('form_footer_url', '').strip()
+                    
+                    # Validate required fields
+                    is_valid_app, app_error = validate_required_field(application_name, "Application Name")
+                    if not is_valid_app:
+                        st.error(app_error)
+                        st.stop()
+                    
+                    is_valid_footer, footer_error = validate_required_field(footer_text, "Footer Text")
+                    if not is_valid_footer:
+                        st.error(footer_error)
+                        st.stop()
+                    
+                    is_valid_url, url_error = validate_url(footer_url, "Footer URL")
+                    if not is_valid_url:
+                        st.error(url_error)
+                        st.stop()
+                    
+                    # Save validated data
+                    st.session_state.onboarding_data['application_name'] = application_name
+                    st.session_state.onboarding_data['newsletter_title_template'] = st.session_state.get('form_title_template', '{name} - Week {week}').strip()
+                    st.session_state.onboarding_data['footer_text'] = footer_text
+                    st.session_state.onboarding_data['footer_url'] = footer_url
+                    st.session_state.onboarding_data['footer_url_display'] = st.session_state.get('form_footer_url_display', '').strip()
+                elif st.session_state.onboarding_step == 3:
+                    # Keywords data already saved in render function, just ensure it exists
+                    if 'keywords' not in st.session_state.onboarding_data:
+                        st.session_state.onboarding_data['keywords'] = []
+                elif st.session_state.onboarding_step == 4:
+                    # Feeds data already saved in render function, just ensure it exists
+                    if 'feeds' not in st.session_state.onboarding_data:
+                        st.session_state.onboarding_data['feeds'] = []
+                elif st.session_state.onboarding_step == 5:
+                    # Validate required fields for step 5
+                    from admin_modules.validators import validate_required_field, validate_email
+                    
+                    contact_name = st.session_state.get('form_contact_name', '').strip()
+                    contact_email = st.session_state.get('form_contact_email', '').strip()
+                    
+                    # Validate required fields
+                    is_valid_name, name_error = validate_required_field(contact_name, "Contact Name")
+                    if not is_valid_name:
+                        st.error(name_error)
+                        st.stop()
+                    
+                    is_valid_email, email_error = validate_email(contact_email)
+                    if not is_valid_email:
+                        st.error(email_error)
+                        st.stop()
+                    
+                    # Save validated data
+                    st.session_state.onboarding_data['contact_name'] = contact_name
+                    st.session_state.onboarding_data['contact_email'] = contact_email.lower()  # Normalize email
+                    st.session_state.onboarding_data['subscription_tier'] = st.session_state.get('form_tier', 'Premium')
+                    st.session_state.onboarding_data['phone'] = st.session_state.get('form_phone', '').strip()
+                
+                # Move to next step
+                st.session_state.onboarding_step += 1
+                # Ensure we stay on Customer Onboarding page
+                st.session_state.current_admin_page = "Customer Onboarding"
+                st.rerun()
     
     with tab2:
         st.subheader("Pending Onboarding Submissions")
@@ -608,7 +804,13 @@ def render_onboarding_step7_create():
         help="This will be the initial password for the contact email. User can change it later."
     )
     
-    if st.form_submit_button("✅ Create Customer Account", type="primary"):
+    # Check if this step is inside the form (it should be)
+    # Note: render_onboarding_step7_create is called inside the form context
+    create_clicked = False
+    if st.session_state.onboarding_step == 7:
+        create_clicked = st.form_submit_button("✅ Create Customer Account", type="primary", key="create_customer_btn")
+    
+    if create_clicked:
         with st.spinner("Creating customer account..."):
             # Prepare customer data
             customer_data = {
@@ -638,9 +840,10 @@ def render_onboarding_step7_create():
                 st.info(f"**Initial User:** {data.get('contact_email')} (Password: {initial_password})")
                 st.info("User can now log in to the User App and change their password.")
                 
-                # Reset form
+                # Reset form but stay on onboarding page
                 st.session_state.onboarding_step = 1
                 st.session_state.onboarding_data = {}
+                st.session_state.current_admin_page = "Customer Onboarding"  # Stay on this page
                 st.balloons()
                 st.rerun()
             else:
