@@ -61,7 +61,8 @@ def main():
         st.session_state.current_admin_page = redirect_page
         del st.session_state.admin_nav_page
     
-    # Determine current page from session state
+    # Determine current page from session state (this is the source of truth)
+    # If set by button, it takes priority
     if 'current_admin_page' in st.session_state and st.session_state.current_admin_page in nav_options:
         page = st.session_state.current_admin_page
     else:
@@ -69,10 +70,10 @@ def main():
         page = nav_options[0]
         st.session_state.current_admin_page = page
     
-    # Get index for selectbox
+    # Get index for selectbox based on current page from session state
     default_index = nav_options.index(page)
     
-    # Render selectbox - use index to ensure it matches current page
+    # Render selectbox - index should match session state
     selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
@@ -80,11 +81,14 @@ def main():
         key="admin_nav_selectbox"
     )
     
-    # If user manually changed selection in sidebar, update session state
-    if selected_page != st.session_state.get('current_admin_page'):
+    # IMPORTANT: Session state is the source of truth for programmatic navigation (buttons)
+    # Only update session state if user manually changed the selectbox AND it's different from session state
+    # This prevents selectbox widget state from overriding button-triggered navigation
+    if selected_page != st.session_state.current_admin_page:
+        # User manually changed in sidebar - update session state
         st.session_state.current_admin_page = selected_page
     
-    # Always use session state as source of truth
+    # Final: ALWAYS use session state as source of truth (button clicks set this directly)
     page = st.session_state.current_admin_page
     
     # Reset onboarding state if user navigated away from onboarding
@@ -143,12 +147,14 @@ def render_overview():
     
     # Quick action - Add New Customer
     if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
+        # Set the page BEFORE rerun
         st.session_state.current_admin_page = "Customer Onboarding"
         # Reset onboarding step when starting fresh
         if 'onboarding_step' in st.session_state:
             del st.session_state.onboarding_step
         if 'onboarding_data' in st.session_state:
             del st.session_state.onboarding_data
+        # Force rerun - navigation will pick up the new page from session state
         st.rerun()
     
     st.markdown("---")
