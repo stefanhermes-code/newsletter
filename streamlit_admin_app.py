@@ -54,49 +54,29 @@ def main():
         "Export/Import"
     ]
     
-    # Check for navigation requests from buttons (highest priority)
-    if 'navigate_to' in st.session_state and st.session_state.navigate_to in nav_options:
-        st.session_state.current_admin_page = st.session_state.navigate_to
-        del st.session_state.navigate_to  # Clear the navigation flag
-    
-    # Check if redirected from another page (from button clicks - legacy support)
-    redirect_page = st.session_state.get('admin_nav_page')
-    if redirect_page and redirect_page in nav_options:
-        # Redirect takes priority - update current page immediately
-        st.session_state.current_admin_page = redirect_page
-        del st.session_state.admin_nav_page
-    
-    # Determine current page from session state (this is the source of truth)
-    # Initialize if needed
+    # Simple: get page from session state, default to Overview
     if 'current_admin_page' not in st.session_state:
-        st.session_state.current_admin_page = nav_options[0]
+        st.session_state.current_admin_page = "Overview"
     
-    # Get the current page from session state
-    current_page_from_state = st.session_state.current_admin_page
+    page = st.session_state.current_admin_page
     
-    # Ensure it's a valid option
-    if current_page_from_state not in nav_options:
-        current_page_from_state = nav_options[0]
-        st.session_state.current_admin_page = current_page_from_state
+    # Make sure it's valid
+    if page not in nav_options:
+        page = "Overview"
+        st.session_state.current_admin_page = page
     
-    # Get index for selectbox
-    page_index = nav_options.index(current_page_from_state)
-    
-    # Render selectbox - use value parameter to force it to match session state
+    # Render selectbox
     selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
-        index=page_index,
+        index=nav_options.index(page),
         key="admin_nav_selectbox"
     )
     
-    # If user manually changed selectbox, update session state
-    if selected_page != current_page_from_state:
-        st.session_state.current_admin_page = selected_page
-        current_page_from_state = selected_page
-    
-    # Use session state as final source of truth
-    page = st.session_state.current_admin_page
+    # If user changed selectbox, update page
+    if selected_page != page:
+        page = selected_page
+        st.session_state.current_admin_page = page
     
     # Reset onboarding state if user navigated away from onboarding
     if page != "Customer Onboarding":
@@ -154,14 +134,11 @@ def render_overview():
     
     # Quick action - Add New Customer
     if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
-        # Use a navigation flag that will be processed in main()
-        st.session_state.navigate_to = "Customer Onboarding"
-        # Reset onboarding step when starting fresh
+        st.session_state.current_admin_page = "Customer Onboarding"
         if 'onboarding_step' in st.session_state:
             del st.session_state.onboarding_step
         if 'onboarding_data' in st.session_state:
             del st.session_state.onboarding_data
-        # Force immediate rerun
         st.rerun()
     
     st.markdown("---")
@@ -189,9 +166,7 @@ def render_customer_management():
         col_add, col_empty = st.columns([1, 4])
         with col_add:
             if st.button("➕ Add New Customer", type="primary", key="add_customer_from_list"):
-                # Use navigation flag for consistent handling
-                st.session_state.navigate_to = "Customer Onboarding"
-                # Reset onboarding step when starting fresh
+                st.session_state.current_admin_page = "Customer Onboarding"
                 if 'onboarding_step' in st.session_state:
                     del st.session_state.onboarding_step
                 if 'onboarding_data' in st.session_state:
