@@ -6,9 +6,8 @@ Cross-customer analytics and insights.
 
 import streamlit as st
 from typing import List, Dict, Optional
-from admin_modules.github_admin import list_all_customers
 from admin_modules.customer_manager import get_customer_details, get_customer_list
-from admin_modules.github_admin import list_customer_files
+from admin_modules.github_admin import list_all_customers, list_customer_files
 from collections import Counter
 from datetime import datetime, timedelta
 
@@ -76,7 +75,7 @@ def render_trend_analysis():
     """Show trend analysis"""
     st.subheader("Trend Analysis")
     
-    all_customers = list_all_customers()
+    all_customers = get_customer_list()
     
     if not all_customers:
         st.info("No customers found for trend analysis.")
@@ -107,6 +106,7 @@ def render_trend_analysis():
     st.write("**Subscription Tier Distribution:**")
     tier_counts = Counter()
     for customer in all_customers:
+        # Get tier directly from customer dict (info fields are spread)
         tier = customer.get('subscription_tier', 'Unknown')
         tier_counts[tier] += 1
     
