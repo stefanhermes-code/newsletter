@@ -43,17 +43,29 @@ def main():
     st.sidebar.title("📊 Admin Dashboard")
     st.sidebar.markdown("---")
     
+    # Navigation options
+    nav_options = [
+        "Overview",
+        "Customer Management",
+        "Customer Onboarding",
+        "Configuration Viewer",
+        "Activity Monitoring",
+        "Analytics",
+        "Export/Import"
+    ]
+    
+    # Check if redirected from another page
+    redirect_page = st.session_state.get('admin_nav_page')
+    if redirect_page and redirect_page in nav_options:
+        default_index = nav_options.index(redirect_page)
+        del st.session_state.admin_nav_page
+    else:
+        default_index = 0
+    
     page = st.sidebar.selectbox(
         "Navigation",
-        [
-            "Overview",
-            "Customer Management",
-            "Customer Onboarding",
-            "Configuration Viewer",
-            "Activity Monitoring",
-            "Analytics",
-            "Export/Import"
-        ]
+        nav_options,
+        index=default_index
     )
     
     # Initialize onboarding session state
@@ -99,6 +111,19 @@ def render_overview():
     
     st.markdown("---")
     
+    # Quick actions
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
+            st.session_state.admin_nav_page = "Customer Onboarding"
+            st.rerun()
+    with col2:
+        if st.button("👥 Customer Management", key="go_to_customer_mgmt"):
+            st.session_state.admin_nav_page = "Customer Management"
+            st.rerun()
+    
+    st.markdown("---")
+    
     # Recent customers
     if all_customers:
         st.subheader("Recent Customers")
@@ -107,7 +132,7 @@ def render_overview():
         for customer in display_customers:
             st.write(f"**{customer.get('company_name', customer.get('customer_id'))}** - {customer.get('status', 'Unknown')}")
     else:
-        st.info("No customers yet. Use 'Customer Onboarding' to create your first customer.")
+        st.info("No customers yet. Click 'Add New Customer' to create your first customer.")
 
 def render_customer_management():
     """Customer Management page"""
@@ -117,6 +142,15 @@ def render_customer_management():
     
     with tab1:
         st.subheader("All Customers")
+        
+        # Add new customer button
+        col_add, col_empty = st.columns([1, 4])
+        with col_add:
+            if st.button("➕ Add New Customer", type="primary", key="add_customer_from_list"):
+                st.session_state.admin_nav_page = "Customer Onboarding"
+                st.rerun()
+        
+        st.markdown("---")
         
         # Search and filter
         col1, col2 = st.columns([3, 1])
