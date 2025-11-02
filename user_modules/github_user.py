@@ -78,8 +78,7 @@ def load_config(customer_id: str, config_type: str) -> Optional[Dict]:
             return json.loads(content)
         except GithubException as e:
             if e.status == 404:
-                logger.warning(f"Config file not found: {config_path}")
-                # Auto-create missing config files with default empty values
+                # Auto-create missing config files with default empty values (silently handle)
                 default_configs = {
                     "keywords": {"keywords": [], "last_updated": "system", "updated_at": datetime.now().isoformat()},
                     "feeds": {"feeds": [], "last_updated": "system", "updated_at": datetime.now().isoformat()},
@@ -93,16 +92,23 @@ def load_config(customer_id: str, config_type: str) -> Optional[Dict]:
                 }
                 
                 if config_type in default_configs:
-                    logger.info(f"Auto-creating missing {config_type}.json for {customer_id}")
+                    logger.info(f"Config file not found: {config_path} - auto-creating with defaults")
                     default_data = default_configs[config_type]
                     # Use save_config_auto to create the file (defined later in this module)
-                    if save_config_auto(customer_id, config_type, default_data, f"Auto-create missing {config_type} config"):
-                        # Return the default data
+                    try:
+                        if save_config_auto(customer_id, config_type, default_data, f"Auto-create missing {config_type} config"):
+                            logger.info(f"Successfully auto-created {config_type}.json for {customer_id}")
+                            # Return the default data
+                            return default_data
+                        else:
+                            # If save failed, still return default so app doesn't crash
+                            logger.warning(f"Failed to auto-create {config_type}.json, using default in memory")
+                            return default_data
+                    except Exception as create_error:
+                        logger.error(f"Error auto-creating {config_type}.json: {create_error}, using default in memory")
                         return default_data
-                    else:
-                        # If save failed, still return default so app doesn't crash
-                        logger.error(f"Failed to auto-create {config_type}.json, returning default")
-                        return default_data
+                else:
+                    logger.warning(f"Config file not found: {config_path} (unknown config type)")
                 
                 return None
             raise
