@@ -1,10 +1,12 @@
 {
   "application_name": "HTC Newsletter",
-  "newsletter_title_template": "{name} - Week {week}",
-  "footer_text": "Powered by GlobalNewsPilot",
-  "footer_url": "https://www.htcglobal.asia",
-  "footer_url_display": "Website HTC Global",
   "short_name": "HTC",
-  "last_updated": "stefan.hermes@htcglobal.asia",
-  "updated_at": "2025-11-02T09:49:16.370337"
+  "newsletter_title_template": "{name} - Week {week}",
+  "logo_path": "HTC logo.png",
+  "footer_text": "",
+  "footer_url": "",
+  "footer_url_display": "",
+  "last_updated": "migration",
+  "updated_at": "2025-01-16T00:00:00"
 }
+
