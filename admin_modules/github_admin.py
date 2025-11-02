@@ -170,8 +170,16 @@ def update_customer_config(customer_id: str, config_type: str, data: Dict, commi
                 raise
         
         logger.info(f"Config updated: {config_path}")
-        # Clear cache
-        get_repo.cache_clear()
+        # Clear cache for get_repo function (if available)
+        # Note: In newer Streamlit versions, cache_resource functions handle clearing differently
+        try:
+            if hasattr(get_repo, 'clear'):
+                get_repo.clear()
+            elif hasattr(get_repo, 'cache_clear'):
+                get_repo.cache_clear()
+        except (AttributeError, Exception) as cache_error:
+            # Cache clearing failed - not critical, cache will refresh on next call
+            logger.debug(f"Cache clearing not available or failed: {cache_error}")
         return True
     
     except Exception as e:
