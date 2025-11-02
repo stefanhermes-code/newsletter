@@ -1,0 +1,8 @@
+{
+  "application_name": "HTC Newsletter",
+  "short_name": "HTC",
+  "newsletter_title_template": "{name} - Week {week}",
+  "footer_text": "Powered by GlobalNewsPilot",
+  "footer_url": "https://www.htcglobal.asia",
+  "footer_url_display": ""
+}
