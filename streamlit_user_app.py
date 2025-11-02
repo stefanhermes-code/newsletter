@@ -51,6 +51,12 @@ def main():
     
     # If not authenticated, show login form
     if not st.session_state.authenticated:
+        # Display GNP logo at top
+        try:
+            st.image("assets/GNP Logo.png", use_container_width=True)
+        except:
+            pass  # If logo not found, continue without it
+        
         st.title("📰 GlobalNewsPilot")
         st.header("Welcome!")
         st.markdown("Please enter your credentials to access your newsletters.")
@@ -99,6 +105,13 @@ def main():
     
     # Store newsletters in session state
     st.session_state.user_newsletters = user_newsletters
+    
+    # Display GNP logo in sidebar
+    try:
+        st.sidebar.image("assets/GNP Logo.png", use_container_width=True)
+        st.sidebar.markdown("---")
+    except:
+        pass  # If logo not found, continue without it
     
     # Logout button in sidebar
     st.sidebar.markdown("---")

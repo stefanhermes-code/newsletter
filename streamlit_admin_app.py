@@ -31,6 +31,13 @@ def main():
         admin_auth.render_login_page()
         return
     
+    # Display GNP logo in sidebar
+    try:
+        st.sidebar.image("assets/GNP Logo.png", use_container_width=True)
+        st.sidebar.markdown("---")
+    except:
+        pass  # If logo not found, continue without it
+    
     # Show logout button in sidebar
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Logout", key="admin_logout"):
