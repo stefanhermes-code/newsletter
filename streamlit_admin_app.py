@@ -54,6 +54,11 @@ def main():
         "Export/Import"
     ]
     
+    # Check for navigation requests from buttons (highest priority)
+    if 'navigate_to' in st.session_state and st.session_state.navigate_to in nav_options:
+        st.session_state.current_admin_page = st.session_state.navigate_to
+        del st.session_state.navigate_to  # Clear the navigation flag
+    
     # Check if redirected from another page (from button clicks - legacy support)
     redirect_page = st.session_state.get('admin_nav_page')
     if redirect_page and redirect_page in nav_options:
@@ -62,33 +67,35 @@ def main():
         del st.session_state.admin_nav_page
     
     # Determine current page from session state (this is the source of truth)
-    # If set by button, it takes priority
-    if 'current_admin_page' in st.session_state and st.session_state.current_admin_page in nav_options:
-        page = st.session_state.current_admin_page
-    else:
-        # First time or no saved state - default to Overview
-        page = nav_options[0]
-        st.session_state.current_admin_page = page
+    # Initialize if needed
+    if 'current_admin_page' not in st.session_state:
+        st.session_state.current_admin_page = nav_options[0]
     
-    # Get index for selectbox based on current page from session state
-    default_index = nav_options.index(page)
+    # Get the current page from session state
+    current_page_from_state = st.session_state.current_admin_page
     
-    # Render selectbox - index should match session state
+    # Ensure it's a valid option
+    if current_page_from_state not in nav_options:
+        current_page_from_state = nav_options[0]
+        st.session_state.current_admin_page = current_page_from_state
+    
+    # Get index for selectbox
+    page_index = nav_options.index(current_page_from_state)
+    
+    # Render selectbox - use value parameter to force it to match session state
     selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
-        index=default_index,
+        index=page_index,
         key="admin_nav_selectbox"
     )
     
-    # IMPORTANT: Session state is the source of truth for programmatic navigation (buttons)
-    # Only update session state if user manually changed the selectbox AND it's different from session state
-    # This prevents selectbox widget state from overriding button-triggered navigation
-    if selected_page != st.session_state.current_admin_page:
-        # User manually changed in sidebar - update session state
+    # If user manually changed selectbox, update session state
+    if selected_page != current_page_from_state:
         st.session_state.current_admin_page = selected_page
+        current_page_from_state = selected_page
     
-    # Final: ALWAYS use session state as source of truth (button clicks set this directly)
+    # Use session state as final source of truth
     page = st.session_state.current_admin_page
     
     # Reset onboarding state if user navigated away from onboarding
@@ -147,14 +154,14 @@ def render_overview():
     
     # Quick action - Add New Customer
     if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
-        # Set the page BEFORE rerun
-        st.session_state.current_admin_page = "Customer Onboarding"
+        # Use a navigation flag that will be processed in main()
+        st.session_state.navigate_to = "Customer Onboarding"
         # Reset onboarding step when starting fresh
         if 'onboarding_step' in st.session_state:
             del st.session_state.onboarding_step
         if 'onboarding_data' in st.session_state:
             del st.session_state.onboarding_data
-        # Force rerun - navigation will pick up the new page from session state
+        # Force immediate rerun
         st.rerun()
     
     st.markdown("---")
@@ -182,7 +189,8 @@ def render_customer_management():
         col_add, col_empty = st.columns([1, 4])
         with col_add:
             if st.button("➕ Add New Customer", type="primary", key="add_customer_from_list"):
-                st.session_state.current_admin_page = "Customer Onboarding"
+                # Use navigation flag for consistent handling
+                st.session_state.navigate_to = "Customer Onboarding"
                 # Reset onboarding step when starting fresh
                 if 'onboarding_step' in st.session_state:
                     del st.session_state.onboarding_step
