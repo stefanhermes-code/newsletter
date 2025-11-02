@@ -1,0 +1,8 @@
+{
+  "application_name": "APBA Weekly Newsbulletin",
+  "short_name": "APBA",
+  "newsletter_title_template": "{name} - Week {week}",
+  "footer_text": "Powered by GNP, Global NewsPilot",
+  "footer_url": "https://www.apba.online",
+  "footer_url_display": ""
+}
