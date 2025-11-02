@@ -1,10 +1,12 @@
 {
-  "application_name": "APBA Weekly Newsbulletin",
-  "newsletter_title_template": "{name} - Week {week}",
-  "footer_text": "Powered by GNP, Global NewsPilot",
-  "footer_url": "https://www.apba.online",
-  "footer_url_display": "APBA Website",
+  "application_name": "APBA NewsBulletin",
   "short_name": "APBA",
-  "last_updated": "stefan.hermes@htcglobal.asia",
-  "updated_at": "2025-11-02T09:48:39.046892"
+  "newsletter_title_template": "{name} - Week {week}",
+  "logo_path": "APBA logo.jpg",
+  "footer_text": "",
+  "footer_url": "",
+  "footer_url_display": "",
+  "last_updated": "migration",
+  "updated_at": "2025-01-16T00:00:00"
 }
+
