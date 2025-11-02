@@ -153,6 +153,47 @@ def validate_feeds(feeds: List[Dict]) -> Tuple[bool, str]:
     
     return True, ""
 
+def load_branding(customer_id: str) -> Dict:
+    """
+    Load branding configuration from GitHub
+    
+    Args:
+        customer_id: Customer identifier
+    
+    Returns:
+        Dictionary with branding settings
+    """
+    branding_config = load_config(customer_id, "branding")
+    if not branding_config:
+        return {}
+    
+    return branding_config
+
+def save_branding(customer_id: str, branding_data: Dict, user_email: Optional[str] = None) -> bool:
+    """
+    Save branding configuration to GitHub (background save)
+    
+    Args:
+        customer_id: Customer identifier
+        branding_data: Branding configuration dictionary
+        user_email: Optional user email for tracking updates
+    
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    # Add metadata
+    from datetime import datetime
+    branding_data['last_updated'] = user_email or 'user'
+    branding_data['updated_at'] = datetime.now().isoformat()
+    
+    # Save to GitHub
+    return save_config_auto(
+        customer_id,
+        "branding",
+        branding_data,
+        f"User: Update branding configuration"
+    )
+
 def render_keywords_editor(customer_id: str, user_email: str):
     """
     Render keywords editor interface
@@ -301,6 +342,105 @@ def render_feeds_editor(customer_id: str, user_email: str):
                             st.error("Failed to save changes.")
                 
                 st.markdown("---")
+
+def render_branding_editor(customer_id: str, user_email: str):
+    """
+    Render branding configuration editor
+    
+    Args:
+        customer_id: Customer identifier
+        user_email: User email for tracking updates
+    """
+    st.subheader("Branding Configuration")
+    st.info("Customize how your newsletter appears. Changes take effect immediately for new newsletters.")
+    
+    # Load current branding
+    branding_data = load_branding(customer_id)
+    
+    if not branding_data:
+        st.warning("Branding configuration not found. Using defaults.")
+        branding_data = {
+            'application_name': '',
+            'newsletter_title_template': '{name} - Week {week}',
+            'footer_text': '',
+            'footer_url': '',
+            'footer_url_display': ''
+        }
+    
+    # Editor form
+    with st.form("branding_editor_form"):
+        application_name = st.text_input(
+            "Application Name *",
+            value=branding_data.get('application_name', ''),
+            help="This name appears in your newsletter and dashboard",
+            key="branding_app_name_form"
+        )
+        
+        newsletter_title_template = st.text_input(
+            "Newsletter Title Template",
+            value=branding_data.get('newsletter_title_template', '{name} - Week {week}'),
+            help="Template for newsletter titles. Use {name} for application name and {week} for week number. Example: '{name} - Week {week}'",
+            key="branding_title_template_form"
+        )
+        
+        st.markdown("---")
+        st.write("**Footer Settings (Optional)**")
+        
+        footer_text = st.text_input(
+            "Footer Text",
+            value=branding_data.get('footer_text', ''),
+            help="Text that appears at the bottom of newsletters",
+            key="branding_footer_text_form"
+        )
+        
+        footer_url = st.text_input(
+            "Footer URL",
+            value=branding_data.get('footer_url', ''),
+            help="Company website URL (must start with http:// or https://)",
+            key="branding_footer_url_form"
+        )
+        
+        footer_url_display = st.text_input(
+            "Footer URL Display Text",
+            value=branding_data.get('footer_url_display', ''),
+            help="Display text for footer link. Example: 'www.example.com'",
+            key="branding_footer_url_display_form"
+        )
+        
+        submitted = st.form_submit_button("💾 Save Branding", type="primary")
+        
+        if submitted:
+            # Validate required fields
+            if not application_name or not application_name.strip():
+                st.error("Application Name is required.")
+                return
+            
+            # Validate URL if provided
+            if footer_url and footer_url.strip():
+                if not footer_url.strip().startswith(('http://', 'https://')):
+                    st.error("Footer URL must start with http:// or https://")
+                    return
+            
+            # Prepare branding data (don't overwrite short_name - admin-only)
+            updated_branding = {
+                'application_name': application_name.strip(),
+                'newsletter_title_template': newsletter_title_template.strip(),
+                'footer_text': footer_text.strip(),
+                'footer_url': footer_url.strip(),
+                'footer_url_display': footer_url_display.strip()
+            }
+            
+            # Preserve short_name if it exists (admin-only field)
+            if 'short_name' in branding_data:
+                updated_branding['short_name'] = branding_data['short_name']
+            
+            # Save
+            if save_branding(customer_id, updated_branding, user_email):
+                st.success("✅ Branding configuration saved successfully!")
+                st.info("Changes will be reflected in the next newsletter you generate.")
+                st.rerun()
+            else:
+                st.error("Failed to save branding configuration. Please try again.")
 
 def render_configuration_page(customer_id: str, user_email: str):
     """
