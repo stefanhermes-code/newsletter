@@ -58,25 +58,20 @@ def main():
     if 'current_admin_page' not in st.session_state:
         st.session_state.current_admin_page = "Overview"
     
-    page = st.session_state.current_admin_page
-    
-    # Make sure it's valid
-    if page not in nav_options:
-        page = "Overview"
-        st.session_state.current_admin_page = page
-    
-    # Render selectbox
+    # Render selectbox - it will update session state when changed
     selected_page = st.sidebar.selectbox(
         "Navigation",
         nav_options,
-        index=nav_options.index(page),
+        index=nav_options.index(st.session_state.current_admin_page),
         key="admin_nav_selectbox"
     )
     
-    # If user changed selectbox, update page
-    if selected_page != page:
-        page = selected_page
-        st.session_state.current_admin_page = page
+    # Update session state if user changed selectbox (selectbox drives navigation)
+    if selected_page != st.session_state.current_admin_page:
+        st.session_state.current_admin_page = selected_page
+    
+    # Use session state as source of truth
+    page = st.session_state.current_admin_page
     
     # Reset onboarding state if user navigated away from onboarding
     if page != "Customer Onboarding":
@@ -134,11 +129,14 @@ def render_overview():
     
     # Quick action - Add New Customer
     if st.button("➕ Add New Customer", type="primary", key="add_customer_overview"):
+        # Set page - this matches exactly what selectbox does
         st.session_state.current_admin_page = "Customer Onboarding"
+        # Clear onboarding state
         if 'onboarding_step' in st.session_state:
             del st.session_state.onboarding_step
         if 'onboarding_data' in st.session_state:
             del st.session_state.onboarding_data
+        # Rerun to apply the change (same as selectbox change)
         st.rerun()
     
     st.markdown("---")
