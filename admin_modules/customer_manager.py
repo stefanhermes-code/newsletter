@@ -172,6 +172,21 @@ def create_customer_record(customer_data: Dict) -> bool:
         st.error("Customer ID is required")
         return False
     
+    # Additional validation (defensive - should already be validated in form)
+    from admin_modules.validators import validate_customer_id, validate_email
+    is_valid_id, id_error = validate_customer_id(customer_id)
+    if not is_valid_id:
+        st.error(f"Invalid Customer ID: {id_error}")
+        return False
+    
+    # Validate email if provided
+    contact_email = customer_data.get("contact_email", "").strip()
+    if contact_email:
+        is_valid_email, email_error = validate_email(contact_email)
+        if not is_valid_email:
+            st.error(f"Invalid Contact Email: {email_error}")
+            return False
+    
     # Check if customer already exists
     existing = list_all_customers()
     if customer_id in existing:
@@ -300,6 +315,16 @@ def add_user_access(customer_id: str, email: str, tier: str, role: str = "viewer
     Returns:
         True if successful, False otherwise
     """
+    # Validate email format
+    from admin_modules.validators import validate_email
+    is_valid_email, email_error = validate_email(email)
+    if not is_valid_email:
+        st.error(f"Invalid email: {email_error}")
+        return False
+    
+    # Normalize email
+    email = email.strip().lower()
+    
     user_access = get_user_access(customer_id)
     if not user_access:
         user_access = {"users": []}
