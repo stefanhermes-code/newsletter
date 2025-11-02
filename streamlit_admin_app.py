@@ -208,22 +208,10 @@ def render_customer_management():
                     with col1:
                         st.write(f"**Status:** {customer.get('status', 'Unknown')}")
                         st.write(f"**ID:** {customer.get('customer_id')}")
+                    with col2:
                         contact_email = customer.get('contact_email', 'N/A')
                         st.write(f"**Contact:** {contact_email}")
-                    with col2:
                         st.write(f"**Tier:** {customer.get('subscription_tier', 'N/A')}")
-                        # Quick action buttons
-                        col_btn1, col_btn2 = st.columns(2)
-                        with col_btn1:
-                            if st.button(f"Select for Details", key=f"select_{customer.get('customer_id')}", use_container_width=True):
-                                st.session_state.selected_customer_id = customer.get('customer_id')
-                                st.session_state.customer_management_tab = "Customer Details"
-                                st.rerun()
-                        with col_btn2:
-                            if st.button(f"Select for Users", key=f"select_users_{customer.get('customer_id')}", use_container_width=True):
-                                st.session_state.selected_customer_id = customer.get('customer_id')
-                                st.session_state.customer_management_tab = "User Access Management"
-                                st.rerun()
         else:
             st.info("No customers found. Use 'Customer Onboarding' to create your first customer.")
     
