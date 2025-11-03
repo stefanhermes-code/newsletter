@@ -163,7 +163,7 @@ def main():
             except:
                 pass  # If logo not found, continue without it
     
-    # Logout button in sidebar
+    # Logout button in sidebar (FIRST)
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Logout", key="logout_button"):
         st.session_state.authenticated = False
@@ -175,17 +175,97 @@ def main():
         st.session_state.found_articles = []
         st.rerun()
     
-    # Newsletter selector (always visible in sidebar)
-    st.sidebar.title("📰 Newsletter")
+    st.sidebar.markdown("---")
     
-    # Use customer_selector module for newsletter selection
-    current_customer_id = customer_selector.render_newsletter_selector(
-        user_newsletters,
-        customer_selector.get_current_customer()
+    # Main navigation (SECOND)
+    available_pages = ["Dashboard", "Newsletters"]
+    
+    # Initialize current customer ID from session state (needed for permission check)
+    if 'current_customer_id' not in st.session_state:
+        if user_newsletters:
+            st.session_state.current_customer_id = user_newsletters[0]['customer_id']
+        else:
+            st.session_state.current_customer_id = None
+    
+    current_customer_id = st.session_state.current_customer_id
+    
+    # Check if user has config edit permission
+    has_edit_config = customer_selector.has_permission(user_email, current_customer_id, "edit_config")
+    if has_edit_config:
+        available_pages.append("Configuration")
+    
+    # Preserve page selection in session state to prevent unwanted navigation changes
+    if 'user_app_current_page' not in st.session_state:
+        st.session_state.user_app_current_page = "Dashboard"
+    
+    # Get current page from session state (this is the source of truth)
+    current_page_from_state = st.session_state.user_app_current_page
+    
+    # Find index for selectbox
+    current_page_idx = 0
+    if current_page_from_state in available_pages:
+        current_page_idx = available_pages.index(current_page_from_state)
+    
+    # Render navigation selectbox
+    page = st.sidebar.selectbox(
+        "Navigation", 
+        available_pages, 
+        index=current_page_idx,  # Use index from session state
+        key="user_app_nav_selectbox"
     )
     
-    if not current_customer_id:
-        current_customer_id = user_newsletters[0]['customer_id'] if user_newsletters else None
+    # Update session state when page changes
+    if page != st.session_state.user_app_current_page:
+        st.session_state.user_app_current_page = page
+    
+    st.sidebar.markdown("---")
+    
+    # Company Selector (THIRD - renamed from "Newsletter")
+    st.sidebar.title("🏢 Company Selector")
+    
+    # Newsletter selector dropdown - SIMPLE DIRECT IMPLEMENTATION
+    if user_newsletters and len(user_newsletters) > 0:
+        newsletter_names = [n['name'] for n in user_newsletters]
+        
+        # Find current index
+        current_index = 0
+        if current_customer_id:
+            current_index = next(
+                (i for i, n in enumerate(user_newsletters) 
+                 if n['customer_id'] == current_customer_id),
+                0
+            )
+        
+        selected_name = st.sidebar.selectbox(
+            "Select Company",
+            newsletter_names,
+            index=current_index,
+            key="company_selector_sidebar"
+        )
+        
+        # Get selected customer ID
+        selected_customer_id = next(
+            n['customer_id'] for n in user_newsletters 
+            if n['name'] == selected_name
+        )
+        
+        # Update if changed (only rerun if actually changed)
+        if selected_customer_id != current_customer_id:
+            st.session_state.current_customer_id = selected_customer_id
+            current_customer_id = selected_customer_id
+            # Clear config cache
+            cache_key = f'customer_config_{current_customer_id}'
+            if cache_key in st.session_state:
+                del st.session_state[cache_key]
+            # Preserve page selection
+            if 'user_app_current_page' not in st.session_state:
+                st.session_state.user_app_current_page = "Dashboard"
+            st.rerun()
+    
+    # Ensure we have a valid customer ID
+    if not current_customer_id and user_newsletters:
+        current_customer_id = user_newsletters[0]['customer_id']
+        st.session_state.current_customer_id = current_customer_id
     
     # Get current newsletter info
     current_newsletter = next((n for n in user_newsletters 
@@ -207,56 +287,6 @@ def main():
             except:
                 pass  # If logo not found, continue without it
     
-    st.sidebar.markdown("---")
-    
-    # Main navigation
-    available_pages = ["Dashboard", "Newsletters"]
-    
-    # Check if user has config edit permission
-    has_edit_config = customer_selector.has_permission(user_email, current_customer_id, "edit_config")
-    if has_edit_config:
-        available_pages.append("Configuration")
-    
-    # Preserve page selection in session state to prevent unwanted navigation changes
-    # Initialize if not exists, but NEVER override if it already exists (preserves user selection)
-    if 'user_app_current_page' not in st.session_state:
-        st.session_state.user_app_current_page = "Dashboard"
-    
-    # Get current page from session state (this is the source of truth)
-    current_page_from_state = st.session_state.user_app_current_page
-    
-    # Find index for selectbox
-    current_page_idx = 0
-    if current_page_from_state in available_pages:
-        current_page_idx = available_pages.index(current_page_from_state)
-    
-    # Render navigation selectbox
-    # CRITICAL: Use session state as source of truth - force widget to match session state
-    # The widget key ensures identity, but we control the value via index parameter
-    nav_key = "user_app_nav_selectbox"
-    
-    # If widget exists in session state but doesn't match our desired page, update it
-    # This handles cases where newsletter change causes rerun
-    if nav_key in st.session_state:
-        widget_value = st.session_state[nav_key]
-        if widget_value != current_page_from_state:
-            # Widget state doesn't match session state - force it to match
-            # Delete the widget state so it resets to our index
-            del st.session_state[nav_key]
-    
-    page = st.sidebar.selectbox(
-        "Navigation", 
-        available_pages, 
-        index=current_page_idx,  # Force index from session state
-        key=nav_key
-    )
-    
-    # Only update session state if this is a genuine user change
-    # (i.e., widget value differs from what we set it to)
-    if page != current_page_from_state:
-        # User manually changed navigation - update session state
-        st.session_state.user_app_current_page = page
-    
     # Load customer config
     customer_config = customer_selector.load_customer_config(current_customer_id)
     
@@ -266,17 +296,16 @@ def main():
         st.set_page_config(page_title=branding_name, layout="wide")
     
     # Main content area
-    # IMPORTANT: Re-check current_customer_id from session state before rendering
-    # This ensures dashboard dropdown changes are reflected immediately
-    current_customer_id = customer_selector.get_current_customer() or current_customer_id
+    # Ensure current_customer_id is from session state (single source of truth)
+    current_customer_id = st.session_state.get('current_customer_id')
     if not current_customer_id and user_newsletters:
         current_customer_id = user_newsletters[0]['customer_id']
+        st.session_state.current_customer_id = current_customer_id
     
-    # Reload config and newsletter info if customer changed
-    if current_customer_id != customer_config.get('customer_id'):
-        customer_config = customer_selector.load_customer_config(current_customer_id)
-        current_newsletter = next((n for n in user_newsletters 
-                                  if n['customer_id'] == current_customer_id), None)
+    # Reload config and newsletter info for current customer
+    customer_config = customer_selector.load_customer_config(current_customer_id)
+    current_newsletter = next((n for n in user_newsletters 
+                              if n['customer_id'] == current_customer_id), None)
     
     if page == "Dashboard":
         render_dashboard(customer_config, current_newsletter, user_email, current_customer_id, user_newsletters)
@@ -293,82 +322,21 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     branding = customer_config.get('branding', {})
     app_name = branding.get('application_name', 'Newsletter')
     
-    # Display customer logo and title with newsletter switcher
+    # Display customer logo and title (NO newsletter switcher - removed per user request)
     logo_path = branding.get('logo_path', '')
     
-    # If user has multiple newsletters, show switcher
-    if len(user_newsletters) > 1:
-        col_logo, col_title, col_switcher = st.columns([1, 3, 2])
-        
-        with col_logo:
-            if logo_path:
-                try:
-                    st.image(logo_path, width=150)
-                except:
-                    pass
-        
-        with col_title:
-            st.title(f"Dashboard - {app_name}")
-        
-        with col_switcher:
-            st.write("")  # Spacing
-            st.write("")  # Spacing
-            
-            # Newsletter switcher dropdown - syncs with sidebar via session state
-            newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
-            newsletter_names = list(newsletter_options.keys())
-            
-            # Get current customer ID from session state (source of truth)
-            current_customer_id_state = customer_selector.get_current_customer() or customer_id
-            
-            # Find current index
-            current_index = next(
-                (i for i, n in enumerate(user_newsletters) 
-                 if n['customer_id'] == current_customer_id_state),
-                0
-            )
-            
-            # Dashboard selectbox - reads from and writes to same session state
-            selected_name = st.selectbox(
-                "📰 Switch Newsletter",
-                newsletter_names,
-                index=current_index,
-                key="newsletter_selector_dashboard"
-            )
-            
-            # Get selected customer ID
-            selected_customer_id = newsletter_options[selected_name]
-            
-            # If changed, update session state (source of truth) and rerun
-            # The rerun will cause sidebar to also update since it reads from same state
-            if selected_customer_id != current_customer_id_state:
-                # CRITICAL: Preserve the current page BEFORE rerun to prevent navigation change
-                # Read current page from widget state if available, otherwise from session state
-                current_page = st.session_state.get('user_app_current_page', 'Dashboard')
-                # Explicitly preserve it
-                st.session_state.user_app_current_page = current_page
-                
-                customer_selector.set_current_customer(selected_customer_id)
-                # Clear any article selections when switching newsletters
-                if 'selected_article_ids' in st.session_state:
-                    st.session_state.selected_article_ids = set()
-                if 'found_articles' in st.session_state:
-                    st.session_state.found_articles = []
-                st.rerun()
-                return  # Exit early, rerun will show updated content
-    else:
-        # Single newsletter - just show logo and title
-        if logo_path:
-            try:
-                col_logo, col_title = st.columns([1, 4])
-                with col_logo:
-                    st.image(logo_path, width=150)
-                with col_title:
-                    st.title(f"Dashboard - {app_name}")
-            except:
+    # Simple layout: logo and title
+    if logo_path:
+        try:
+            col_logo, col_title = st.columns([1, 4])
+            with col_logo:
+                st.image(logo_path, width=150)
+            with col_title:
                 st.title(f"Dashboard - {app_name}")
-        else:
+        except:
             st.title(f"Dashboard - {app_name}")
+    else:
+        st.title(f"Dashboard - {app_name}")
     
     # News Finding Section
     st.header("📰 Find News")
@@ -393,28 +361,52 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             st.session_state.is_finding_news = True
         
         with st.spinner("Finding news articles..."):
-            # Get keywords and feeds
-            keywords = [k for k in config_manager.load_keywords(customer_id) if k]
-            feeds_config = config_manager.load_feeds(customer_id)
-            feed_urls = [f['url'] for f in feeds_config if f.get('enabled', True)]
-            
-            # Progress callback
-            status_placeholder = st.empty()
-            
-            def progress_callback(message):
-                status_placeholder.info(message)
-            
-            # Find news
-            articles = news_finder.find_news_background(
-                keywords=keywords,
-                feed_urls=feed_urls,
-                time_period=time_period,
-                progress_callback=progress_callback
-            )
-            
-            st.session_state.found_articles = articles
-            st.session_state.is_finding_news = False
-            status_placeholder.empty()
+            try:
+                # Get current customer ID from session state (ensure it's up to date)
+                current_customer_id = st.session_state.get('current_customer_id', customer_id)
+                if not current_customer_id:
+                    st.error("No company selected. Please select a company from the sidebar.")
+                    st.session_state.is_finding_news = False
+                    st.stop()
+                
+                # Get keywords and feeds
+                keywords = [k for k in config_manager.load_keywords(current_customer_id) if k]
+                feeds_config = config_manager.load_feeds(current_customer_id)
+                feed_urls = [f['url'] for f in feeds_config if f.get('enabled', True)]
+                
+                # Check if we have keywords or feeds
+                if not keywords and not feed_urls:
+                    st.warning("No keywords or RSS feeds configured. Please configure them in the Configuration section.")
+                    st.session_state.is_finding_news = False
+                    st.stop()
+                
+                # Progress callback
+                status_placeholder = st.empty()
+                
+                def progress_callback(message):
+                    status_placeholder.info(message)
+                
+                # Find news
+                articles = news_finder.find_news_background(
+                    keywords=keywords,
+                    feed_urls=feed_urls,
+                    time_period=time_period,
+                    progress_callback=progress_callback
+                )
+                
+                st.session_state.found_articles = articles
+                st.session_state.is_finding_news = False
+                status_placeholder.empty()
+                
+                if articles:
+                    st.success(f"✅ Found {len(articles)} articles")
+                else:
+                    st.info("No articles found. Try adjusting your keywords or time period.")
+                    
+            except Exception as e:
+                st.error(f"Error finding news: {str(e)}")
+                st.session_state.is_finding_news = False
+                status_placeholder.empty()
     
     st.markdown("---")
     
