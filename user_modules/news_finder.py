@@ -170,10 +170,21 @@ def find_news_rss(feed_urls: List[str], time_period: str = "Last 7 days") -> Lis
     else:
         days = 7
     
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    }
+    
     for feed_url in feed_urls:
         try:
-            # Parse RSS feed
-            feed = feedparser.parse(feed_url)
+            # Fetch with explicit timeout and UA, then parse
+            try:
+                resp = requests.get(feed_url, headers=headers, timeout=8)
+                content = resp.content
+            except Exception as e:
+                logger.warning(f"RSS fetch failed for {feed_url}: {e}")
+                continue
+            
+            feed = feedparser.parse(content)
             
             if feed.bozo:
                 logger.warning(f"Feed parsing issue for {feed_url}: {feed.bozo_exception}")
