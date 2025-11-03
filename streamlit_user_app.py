@@ -211,7 +211,7 @@ def main():
     
     # Render navigation selectbox (label hidden for consistent font sizing)
     page = st.sidebar.selectbox(
-        "",
+        "Select page",
         available_pages,
         index=current_page_idx,  # Use index from session state
         key="user_app_nav_selectbox",
@@ -241,7 +241,7 @@ def main():
             )
         
         selected_name = st.sidebar.selectbox(
-            "",
+            "Select company",
             newsletter_names,
             index=current_index,
             key="company_selector_sidebar",
