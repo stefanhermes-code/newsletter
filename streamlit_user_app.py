@@ -92,8 +92,7 @@ def main():
             email = st.text_input("Email Address", placeholder="user@company.com", key="login_email")
             password = st.text_input("Password", type="password", key="login_password")
             
-            # Legal disclaimer (same as PI3)
-            st.caption("By submitting content (including files), you confirm you have the right to share it and grant PU ExpertCenter/PI3 a worldwide, royalty‑free license to use it to operate, secure, and improve the service. You waive any claims arising from such permitted use, to the maximum extent allowed by law. Do not upload confidential or personal data. This service is informational only and not engineering, legal, or safety advice.")
+            # (legal disclaimer removed per requirements)
             
             submitted = st.form_submit_button("Login", type="primary")
             
@@ -164,7 +163,6 @@ def main():
                 pass  # If logo not found, continue without it
     
     # Logout button in sidebar (FIRST)
-    st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Logout", key="logout_button"):
         st.session_state.authenticated = False
         st.session_state.user_email = None
