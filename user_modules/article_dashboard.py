@@ -144,6 +144,8 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
                         st.session_state.selected_article_ids.add(article_id)
                     else:
                         st.session_state.selected_article_ids.discard(article_id)
+                    # Reflect selection changes immediately (updates count above)
+                    st.rerun()
             
             with col2:
                 # Article info: Title as hyperlink, published date only
