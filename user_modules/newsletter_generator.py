@@ -37,6 +37,7 @@ def generate_newsletter(selected_articles: List[Dict], branding: Dict, customer_
     footer_text = branding.get("footer_text", "")
     footer_url = branding.get("footer_url", "")
     footer_url_display = branding.get("footer_url_display", footer_url)
+    logo_path = branding.get("logo_path", "")
     
     # Calculate week number
     week_number = datetime.now().isocalendar()[1]
@@ -55,13 +56,23 @@ def generate_newsletter(selected_articles: List[Dict], branding: Dict, customer_
         filename = f"Newsletter_Week_{week_number:02d}_{year}.html"
     
     # Build HTML
+    # Build a raw GitHub URL for logo so it renders in preview/email
+    logo_url = ""
+    if logo_path:
+        repo_name = st.secrets.get("github_repo", "") if hasattr(st, 'secrets') else ""
+        if repo_name:
+            logo_url = f"https://raw.githubusercontent.com/{repo_name}/main/{logo_path}"
+        else:
+            logo_url = logo_path
+
     html_content = format_html_newsletter(
         selected_articles,
         newsletter_title,
         application_name,
         footer_text,
         footer_url,
-        footer_url_display
+        footer_url_display,
+        logo_url
     )
     
     # Save to GitHub
@@ -79,7 +90,8 @@ def generate_newsletter(selected_articles: List[Dict], branding: Dict, customer_
         return None
 
 def format_html_newsletter(articles: List[Dict], title: str, application_name: str,
-                          footer_text: str, footer_url: str, footer_url_display: str) -> str:
+                          footer_text: str, footer_url: str, footer_url_display: str,
+                          logo_url: str = "") -> str:
     """
     Format newsletter as HTML with branding
     
@@ -118,11 +130,14 @@ def format_html_newsletter(articles: List[Dict], title: str, application_name: s
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
         .header {{
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             border-bottom: 3px solid #2c3e50;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }}
+        .logo {{ height: 48px; }}
         .header h1 {{
             color: #2c3e50;
             margin: 0;
@@ -204,8 +219,11 @@ def format_html_newsletter(articles: List[Dict], title: str, application_name: s
 <body>
     <div class="newsletter-container">
         <div class="header">
-            <h1>{title}</h1>
-            <div class="subtitle">{application_name}</div>
+            {f'<img class="logo" src="{logo_url}" alt="logo" />' if logo_url else ''}
+            <div>
+                <h1 style="margin:0;">{title}</h1>
+                <div class="subtitle">{application_name}</div>
+            </div>
         </div>
         
         <div class="date-info">
