@@ -264,17 +264,21 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             st.write("")  # Spacing
             st.write("")  # Spacing
             
-            # Newsletter switcher dropdown
+            # Newsletter switcher dropdown - syncs with sidebar via session state
             newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
             newsletter_names = list(newsletter_options.keys())
+            
+            # Get current customer ID from session state (source of truth)
+            current_customer_id_state = customer_selector.get_current_customer() or customer_id
             
             # Find current index
             current_index = next(
                 (i for i, n in enumerate(user_newsletters) 
-                 if n['customer_id'] == customer_id),
+                 if n['customer_id'] == current_customer_id_state),
                 0
             )
             
+            # Dashboard selectbox - reads from and writes to same session state
             selected_name = st.selectbox(
                 "📰 Switch Newsletter",
                 newsletter_names,
@@ -282,10 +286,20 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 key="newsletter_selector_dashboard"
             )
             
-            # Check if selection changed
+            # Get selected customer ID
             selected_customer_id = newsletter_options[selected_name]
-            if selected_customer_id != customer_id:
+            
+            # If changed, update session state and sync sidebar widget
+            if selected_customer_id != current_customer_id_state:
+                # Update the session state (source of truth)
                 customer_selector.set_current_customer(selected_customer_id)
+                
+                # Sync sidebar selectbox widget by updating its index
+                # The sidebar widget key stores the index
+                sidebar_key = "newsletter_selector_sidebar"
+                selected_index = newsletter_names.index(selected_name)
+                st.session_state[sidebar_key] = selected_index
+                
                 st.rerun()
     else:
         # Single newsletter - just show logo and title
