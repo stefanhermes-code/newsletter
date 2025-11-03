@@ -145,6 +145,18 @@ def main():
         # Show tier indicator
         st.sidebar.info(f"**Tier:** {current_newsletter.get('tier', 'Unknown').title()}")
     
+    # Display customer logo in sidebar if available
+    if current_customer_id:
+        customer_config = customer_selector.load_customer_config(current_customer_id)
+        branding = customer_config.get('branding', {})
+        logo_path = branding.get('logo_path', '')
+        if logo_path:
+            try:
+                st.sidebar.markdown("---")
+                st.sidebar.image(logo_path, use_container_width=True)
+            except:
+                pass  # If logo not found, continue without it
+    
     st.sidebar.markdown("---")
     
     # Main navigation
@@ -181,7 +193,20 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     branding = customer_config.get('branding', {})
     app_name = branding.get('application_name', 'Newsletter')
     
-    st.title(f"Dashboard - {app_name}")
+    # Display customer logo if available
+    logo_path = branding.get('logo_path', '')
+    if logo_path:
+        try:
+            col_logo, col_title = st.columns([1, 4])
+            with col_logo:
+                st.image(logo_path, width=150)
+            with col_title:
+                st.title(f"Dashboard - {app_name}")
+        except:
+            # If logo not found, just show title
+            st.title(f"Dashboard - {app_name}")
+    else:
+        st.title(f"Dashboard - {app_name}")
     
     # News Finding Section
     st.header("📰 Find News")
