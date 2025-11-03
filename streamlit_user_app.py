@@ -410,48 +410,57 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                     st.session_state.is_finding_news = False
                     st.stop()
                 
-                # Progress callback
+                # Progress + streaming placeholders
                 status_placeholder = st.empty()
+                count_placeholder = st.empty()
+                stream_placeholder = st.empty()
                 
                 def progress_callback(message):
                     status_placeholder.info(message)
                 
-                # Find news (normal or detailed debug)
-                if st.session_state.get('enable_debug_news_run'):
-                    st.info("Debug mode: running Google and RSS separately…")
-                    google_count = 0
-                    rss_count = 0
-                    combined = []
-                    try:
-                        if keywords:
-                            progress_callback("🔍 Searching Google News…")
-                            google_articles = news_finder.find_news_google(keywords, time_period)
-                            google_count = len(google_articles)
-                            combined.extend(google_articles)
-                    except Exception as e:
-                        st.error(f"Google search error: {e}")
-                    try:
-                        if feed_urls:
-                            progress_callback("📡 Checking RSS feeds…")
-                            rss_articles = news_finder.find_news_rss(feed_urls, time_period)
-                            rss_count = len(rss_articles)
-                            # Deduplicate by URL
-                            seen = set(a.get('url') for a in combined)
-                            for a in rss_articles:
-                                if a.get('url') not in seen:
-                                    combined.append(a)
-                                    seen.add(a.get('url'))
-                    except Exception as e:
-                        st.error(f"RSS parsing error: {e}")
-                    st.info(f"Debug totals → Google: {google_count}, RSS: {rss_count}, Combined: {len(combined)}")
-                    articles = sorted(combined, key=lambda x: x.get('published_datetime', ''), reverse=True)
-                else:
-                    articles = news_finder.find_news_background(
-                        keywords=keywords,
-                        feed_urls=feed_urls,
-                        time_period=time_period,
-                        progress_callback=progress_callback
-                    )
+                # Initialize accumulators and reset previous results for this run
+                st.session_state.found_articles = []
+                seen_urls_stream = set()
+                
+                # STREAM GOOGLE RESULTS INCREMENTALLY
+                if keywords:
+                    progress_callback("🔍 Searching Google News…")
+                    for kw in keywords:
+                        try:
+                            google_batch = news_finder.find_news_google([kw], time_period)
+                            for a in google_batch:
+                                url = a.get('url')
+                                if url and url not in seen_urls_stream:
+                                    st.session_state.found_articles.append(a)
+                                    seen_urls_stream.add(url)
+                            # Update running count and a small rolling preview (last 10 titles)
+                            count_placeholder.info(f"Google results so far: {len([a for a in st.session_state.found_articles if a.get('found_via')=='google'])} | Total: {len(st.session_state.found_articles)}")
+                            latest = st.session_state.found_articles[-10:]
+                            stream_titles = "\n".join([f"- {a.get('title','')[:100]}" for a in latest if a.get('title')])
+                            stream_placeholder.markdown(f"**Latest articles:**\n\n{stream_titles}")
+                        except Exception as e:
+                            st.warning(f"Google error for keyword '{kw}': {e}")
+                
+                # STREAM RSS RESULTS INCREMENTALLY
+                if feed_urls:
+                    progress_callback("📡 Checking RSS feeds…")
+                    for feed_url in feed_urls:
+                        try:
+                            rss_batch = news_finder.find_news_rss([feed_url], time_period)
+                            for a in rss_batch:
+                                url = a.get('url')
+                                if url and url not in seen_urls_stream:
+                                    st.session_state.found_articles.append(a)
+                                    seen_urls_stream.add(url)
+                            count_placeholder.info(f"Including RSS: {len(st.session_state.found_articles)} total")
+                            latest = st.session_state.found_articles[-10:]
+                            stream_titles = "\n".join([f"- {a.get('title','')[:100]}" for a in latest if a.get('title')])
+                            stream_placeholder.markdown(f"**Latest articles:**\n\n{stream_titles}")
+                        except Exception as e:
+                            st.warning(f"RSS error for feed '{feed_url}': {e}")
+                
+                # Finalize
+                articles = sorted(st.session_state.found_articles, key=lambda x: x.get('published_datetime', ''), reverse=True)
                 
                 st.session_state.found_articles = articles
                 st.session_state.is_finding_news = False
