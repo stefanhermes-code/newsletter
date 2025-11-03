@@ -63,7 +63,7 @@ def render_login_page():
     for logo_path in logo_paths:
         if os.path.exists(logo_path):
             try:
-                st.image(logo_path, use_container_width=True)
+                st.image(logo_path, width=200)  # Fixed width instead of full container
                 logo_displayed = True
                 break
             except Exception as e:
@@ -72,7 +72,7 @@ def render_login_page():
     if not logo_displayed:
         for logo_path in logo_paths:
             try:
-                st.image(logo_path, use_container_width=True)
+                st.image(logo_path, width=200)  # Fixed width instead of full container
                 break
             except:
                 continue
