@@ -32,11 +32,32 @@ def main():
         return
     
     # Display GNP logo in sidebar
-    try:
-        st.sidebar.image("assets/GNP Logo.png", use_container_width=True)
-        st.sidebar.markdown("---")
-    except:
-        pass  # If logo not found, continue without it
+    import os
+    sidebar_logo_paths = [
+        "assets/GNP Logo.png",  # GitHub location (primary)
+        "assets/GNP logo.png",
+        "GNP Logo.png",  # Root directory (local fallback)
+        "GNP logo.png"
+    ]
+    sidebar_logo_found = False
+    for path in sidebar_logo_paths:
+        if os.path.exists(path):
+            try:
+                st.sidebar.image(path, use_container_width=True)
+                st.sidebar.markdown("---")
+                sidebar_logo_found = True
+                break
+            except Exception as e:
+                continue
+    if not sidebar_logo_found:
+        # Try to display anyway (might work on Streamlit Cloud from GitHub)
+        for path in sidebar_logo_paths:
+            try:
+                st.sidebar.image(path, use_container_width=True)
+                st.sidebar.markdown("---")
+                break
+            except:
+                continue
     
     # Show logout button in sidebar
     st.sidebar.markdown("---")
