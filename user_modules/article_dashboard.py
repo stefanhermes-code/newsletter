@@ -8,6 +8,7 @@ for newsletter generation.
 import streamlit as st
 from typing import List, Dict, Optional
 from datetime import datetime, date
+import re
 from user_modules.news_finder import get_article_content
 import logging
 
@@ -37,36 +38,42 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     
     st.write(f"**Found {len(articles)} articles**")
     
-    # Filters
-    col1, col2, col3 = st.columns(3)
+    # Filters (professional layout): keywords wide + date range side-by-side on the right
+    col_kw, col_from, col_to = st.columns([4, 2, 2])
     
-    # Date range filter
-    with col1:
-        st.caption("Filter by Date")
-        # Determine default bounds from data
-        dates = []
-        for a in articles:
+    with col_kw:
+        keywords_query = st.text_input(
+            "Keyword(s)",
+            value="",
+            key="article_filter_keywords",
+            placeholder="e.g. polyurethane, foam, recycling"
+        )
+    
+    # Determine default bounds from data
+    dates = []
+    for a in articles:
+        # Try ISO first (published_datetime), then YYYY-MM-DD
+        dt_iso = a.get("published_datetime", "")
+        if dt_iso:
             try:
-                dates.append(datetime.fromisoformat(a.get("published_datetime", a.get("published_date", ""))).date())
+                dates.append(datetime.fromisoformat(dt_iso).date())
+                continue
             except Exception:
-                try:
-                    dates.append(datetime.strptime(a.get("published_date", ""), "%Y-%m-%d").date())
-                except Exception:
-                    pass
-        min_date = min(dates) if dates else None
-        max_date = max(dates) if dates else None
+                pass
+        d_plain = a.get("published_date", "")
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+            try:
+                dates.append(datetime.strptime(d_plain, fmt).date())
+                break
+            except Exception:
+                continue
+    min_date = min(dates) if dates else None
+    max_date = max(dates) if dates else None
+    
+    with col_from:
         start_date = st.date_input("From", value=min_date if min_date else date.today(), key="filter_from_date")
+    with col_to:
         end_date = st.date_input("To", value=max_date if max_date else date.today(), key="filter_to_date")
-    
-    # Keyword(s) filter (comma or space separated)
-    with col2:
-        st.caption("Filter by Keyword(s)")
-        keywords_query = st.text_input("Keywords", value="", key="article_filter_keywords", help="Enter words separated by comma or space")
-    
-    # Category info only (not a filter for now)
-    with col3:
-        st.caption("Category info")
-        st.write("Category = matched keyword (Google) or feed name (RSS)")
     
     # Apply filters
     filtered_articles = articles
@@ -74,7 +81,7 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     if start_date and end_date:
         def in_range(a: Dict) -> bool:
             d = None
-            for fmt in ("%Y-%m-%d",):
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
                 try:
                     d = datetime.strptime(a.get("published_date", ""), fmt).date()
                     break
@@ -89,12 +96,12 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
             return start_date <= d <= end_date
         filtered_articles = [a for a in filtered_articles if in_range(a)]
     
-    # Keywords apply (all tokens must appear)
+    # Keywords apply (any token matches: OR logic)
     if keywords_query.strip():
-        tokens = [t.lower() for t in keywords_query.replace(',', ' ').split() if t.strip()]
+        tokens = [t.lower() for t in re.split(r"[\s,]+", keywords_query) if t.strip()]
         def match_kw(a: Dict) -> bool:
             hay = f"{a.get('title','')} {a.get('snippet','')} {a.get('category','')}".lower()
-            return all(t in hay for t in tokens)
+            return any(t in hay for t in tokens)
         filtered_articles = [a for a in filtered_articles if match_kw(a)]
     
     st.write(f"**Showing {len(filtered_articles)} articles** (filtered)")
