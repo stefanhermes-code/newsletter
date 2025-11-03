@@ -367,33 +367,12 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
         st.write("")
         find_button = st.button("🔍 Find News", type="primary")
 
-    # Optional diagnostics
-    with st.expander("Diagnostics (optional)"):
-        st.caption("Use to troubleshoot when results are empty.")
-        current_company_debug = st.session_state.get('current_customer_id', customer_id)
-        st.write(f"Current company: `{current_company_debug}`")
-        try:
-            debug_keywords = [k for k in config_manager.load_keywords(customer_id) if k]
-        except Exception:
-            debug_keywords = []
-        try:
-            debug_feeds_cfg = config_manager.load_feeds(customer_id)
-            debug_feed_urls = [f.get('url', '') for f in debug_feeds_cfg if f.get('enabled', True)]
-        except Exception:
-            debug_feed_urls = []
-        st.write(f"Keywords: {len(debug_keywords)} (showing up to 5): {debug_keywords[:5]}")
-        st.write(f"Feeds: {len(debug_feed_urls)} (showing up to 5): {debug_feed_urls[:5]}")
-        debug_mode = st.checkbox("Enable detailed debug for this run", key="enable_debug_news_run", value=False)
+    # (diagnostics removed)
     
     # Find news functionality
     if find_button or st.session_state.is_finding_news:
         if not st.session_state.is_finding_news:
             st.session_state.is_finding_news = True
-        
-        # Prepare UI placeholders up front
-        status_placeholder = st.empty()
-        count_placeholder = st.empty()
-        stream_placeholder = st.empty()
         
         with st.spinner("Finding news articles..."):
             try:
@@ -417,47 +396,13 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                     st.session_state.is_finding_news = False
                     st.stop()
                 
-                # Progress callback
-                def progress_callback(message):
-                    status_placeholder.info(message)
-                
-                # Initialize accumulators and reset previous results for this run
-                st.session_state.found_articles = []
-                seen_urls_stream = set()
-                
-                # STREAM GOOGLE RESULTS INCREMENTALLY
-                if keywords:
-                    progress_callback("🔍 Searching Google News…")
-                    for kw in keywords:
-                        try:
-                            google_batch = news_finder.find_news_google([kw], time_period)
-                            for a in google_batch:
-                                url = a.get('url')
-                                if url and url not in seen_urls_stream:
-                                    st.session_state.found_articles.append(a)
-                                    seen_urls_stream.add(url)
-                            # Update running count only
-                            count_placeholder.info(f"Google results so far: {len([a for a in st.session_state.found_articles if a.get('found_via')=='google'])} | Total: {len(st.session_state.found_articles)}")
-                        except Exception as e:
-                            st.warning(f"Google error for keyword '{kw}': {e}")
-                
-                # STREAM RSS RESULTS INCREMENTALLY
-                if feed_urls:
-                    progress_callback("📡 Checking RSS feeds…")
-                    for feed_url in feed_urls:
-                        try:
-                            rss_batch = news_finder.find_news_rss([feed_url], time_period)
-                            for a in rss_batch:
-                                url = a.get('url')
-                                if url and url not in seen_urls_stream:
-                                    st.session_state.found_articles.append(a)
-                                    seen_urls_stream.add(url)
-                            count_placeholder.info(f"Including RSS: {len(st.session_state.found_articles)} total")
-                        except Exception as e:
-                            st.warning(f"RSS error for feed '{feed_url}': {e}")
-                
-                # Finalize
-                articles = sorted(st.session_state.found_articles, key=lambda x: x.get('published_datetime', ''), reverse=True)
+                # Find news in one pass (streaming and diagnostics removed)
+                articles = news_finder.find_news_background(
+                    keywords=keywords,
+                    feed_urls=feed_urls,
+                    time_period=time_period,
+                    progress_callback=None
+                )
                 
                 st.session_state.found_articles = articles
             except Exception as e:
@@ -465,8 +410,7 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             finally:
                 # Always finalize to avoid stuck spinner
                 st.session_state.is_finding_news = False
-                status_placeholder.empty()
-                stream_placeholder.empty()
+                
                 
                 if articles:
                     st.success(f"✅ Found {len(articles)} articles")
