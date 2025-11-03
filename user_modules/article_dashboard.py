@@ -105,15 +105,14 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
         filtered_articles = [a for a in filtered_articles if match_kw(a)]
     
     st.write(f"**Showing {len(filtered_articles)} articles** (filtered)")
-    
-    # Selection controls
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.write("")
-    with col2:
+
+    # Selection controls - inline, left-aligned
+    btn_col1, btn_col2, _ = st.columns([1, 1, 8])
+    with btn_col1:
         if st.button("Select All", key="select_all_articles"):
             st.session_state.selected_article_ids = set(a["article_id"] for a in filtered_articles)
             st.rerun()
+    with btn_col2:
         if st.button("Clear Selection", key="clear_selection"):
             st.session_state.selected_article_ids = set()
             st.rerun()
@@ -150,13 +149,7 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
                 st.markdown(f"### [{title}]({url})")
                 st.caption(f"📅 {article.get('published_date', 'Unknown')}")
                 
-                # Optional snippet
-                snippet = article.get('snippet', '')
-                if snippet:
-                    # Strip any HTML tags/anchors and show plain text only
-                    snippet_clean = re.sub(r"<[^>]+>", "", snippet)
-                    text = snippet_clean.strip()
-                    st.write(text[:200] + "..." if len(text) > 200 else text)
+                # Snippet removed per requirements
             
             st.markdown("---")
     
