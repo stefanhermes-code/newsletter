@@ -42,11 +42,14 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     col_kw, col_from, col_to = st.columns([4, 2, 2])
     
     with col_kw:
-        keywords_query = st.text_input(
+        # Build dropdown options from article categories (Google: matched keyword)
+        keyword_options = sorted({a.get("category", "").strip() for a in articles if a.get("category")})
+        selected_keywords = st.multiselect(
             "Keyword(s)",
-            value="",
-            key="article_filter_keywords",
-            placeholder="e.g. polyurethane, foam, recycling"
+            options=keyword_options,
+            default=[],
+            key="article_filter_keywords_multi",
+            help="Select one or more keywords"
         )
     
     # Determine default bounds from data
@@ -96,13 +99,13 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
             return start_date <= d <= end_date
         filtered_articles = [a for a in filtered_articles if in_range(a)]
     
-    # Keywords apply (any token matches: OR logic)
-    if keywords_query.strip():
-        tokens = [t.lower() for t in re.split(r"[\s,]+", keywords_query) if t.strip()]
-        def match_kw(a: Dict) -> bool:
-            hay = f"{a.get('title','')} {a.get('snippet','')} {a.get('category','')}".lower()
-            return any(t in hay for t in tokens)
-        filtered_articles = [a for a in filtered_articles if match_kw(a)]
+    # Keyword dropdown apply (match category)
+    if selected_keywords:
+        selected_set = set(k.lower() for k in selected_keywords)
+        filtered_articles = [
+            a for a in filtered_articles
+            if a.get("category") and a.get("category").lower() in selected_set
+        ]
     
     st.write(f"**Showing {len(filtered_articles)} articles** (filtered)")
 
