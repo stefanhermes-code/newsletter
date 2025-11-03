@@ -2,7 +2,7 @@
   "application_name": "HTC Newsletter",
   "short_name": "HTC",
   "newsletter_title_template": "{name} - Week {week}",
-  "logo_path": "customers/gnp0001/assets/logo.png",
+  "logo_path": "customers/gnp0001/assets/HTC logo.png",
   "footer_text": "",
   "footer_url": "",
   "footer_url_display": "",
