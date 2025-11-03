@@ -217,7 +217,20 @@ def main():
     if has_edit_config:
         available_pages.append("Configuration")
     
-    page = st.sidebar.selectbox("Navigation", available_pages)
+    # Preserve page selection in session state to prevent unwanted navigation changes
+    if 'user_app_current_page' not in st.session_state:
+        st.session_state.user_app_current_page = "Dashboard"
+    
+    # Get current page from session state or default to Dashboard
+    current_page_idx = 0
+    if st.session_state.user_app_current_page in available_pages:
+        current_page_idx = available_pages.index(st.session_state.user_app_current_page)
+    
+    page = st.sidebar.selectbox("Navigation", available_pages, index=current_page_idx, key="user_app_nav_selectbox")
+    
+    # Update session state when page changes
+    if page != st.session_state.user_app_current_page:
+        st.session_state.user_app_current_page = page
     
     # Load customer config
     customer_config = customer_selector.load_customer_config(current_customer_id)
@@ -228,6 +241,18 @@ def main():
         st.set_page_config(page_title=branding_name, layout="wide")
     
     # Main content area
+    # IMPORTANT: Re-check current_customer_id from session state before rendering
+    # This ensures dashboard dropdown changes are reflected immediately
+    current_customer_id = customer_selector.get_current_customer() or current_customer_id
+    if not current_customer_id and user_newsletters:
+        current_customer_id = user_newsletters[0]['customer_id']
+    
+    # Reload config and newsletter info if customer changed
+    if current_customer_id != customer_config.get('customer_id'):
+        customer_config = customer_selector.load_customer_config(current_customer_id)
+        current_newsletter = next((n for n in user_newsletters 
+                                  if n['customer_id'] == current_customer_id), None)
+    
     if page == "Dashboard":
         render_dashboard(customer_config, current_newsletter, user_email, current_customer_id, user_newsletters)
     elif page == "Newsletters":
@@ -289,11 +314,20 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             # Get selected customer ID
             selected_customer_id = newsletter_options[selected_name]
             
-            # If changed, update session state (source of truth)
-            # After rerun, sidebar will read from this same state
+            # If changed, update session state (source of truth) and rerun
+            # The rerun will cause sidebar to also update since it reads from same state
             if selected_customer_id != current_customer_id_state:
+                # Preserve the Dashboard page selection (prevent navigation to Newsletter section)
+                if 'user_app_current_page' not in st.session_state:
+                    st.session_state.user_app_current_page = "Dashboard"
                 customer_selector.set_current_customer(selected_customer_id)
+                # Clear any article selections when switching newsletters
+                if 'selected_article_ids' in st.session_state:
+                    st.session_state.selected_article_ids = set()
+                if 'found_articles' in st.session_state:
+                    st.session_state.found_articles = []
                 st.rerun()
+                return  # Exit early, rerun will show updated content
     else:
         # Single newsletter - just show logo and title
         if logo_path:
