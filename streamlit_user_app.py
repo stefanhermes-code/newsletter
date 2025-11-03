@@ -503,7 +503,23 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
 
 def render_newsletters_viewer(customer_id, current_newsletter, user_email):
     """View generated newsletters"""
-    st.title("📰 Generated Newsletters")
+    # Header with customer logo and title (consistent with Dashboard)
+    customer_config = customer_selector.load_customer_config(customer_id)
+    branding = customer_config.get('branding', {})
+    app_name = branding.get('application_name', 'Newsletter')
+    logo_path = branding.get('logo_path', '')
+
+    if logo_path:
+        try:
+            col_logo, col_title = st.columns([1, 4])
+            with col_logo:
+                st.image(logo_path, width=150)
+            with col_title:
+                st.title(f"📰 Generated Newsletters - {app_name}")
+        except:
+            st.title(f"📰 Generated Newsletters - {app_name}")
+    else:
+        st.title(f"📰 Generated Newsletters - {app_name}")
     
     # Load newsletters from GitHub
     newsletters = list_newsletters(customer_id)
@@ -547,6 +563,23 @@ def render_newsletters_viewer(customer_id, current_newsletter, user_email):
 
 def render_configuration(customer_id, user_email):
     """Configuration management (only if user has edit_config permission)"""
+    # Header with customer logo and title (consistent with Dashboard)
+    customer_config = customer_selector.load_customer_config(customer_id)
+    branding = customer_config.get('branding', {})
+    app_name = branding.get('application_name', 'Newsletter')
+    logo_path = branding.get('logo_path', '')
+
+    if logo_path:
+        try:
+            col_logo, col_title = st.columns([1, 4])
+            with col_logo:
+                st.image(logo_path, width=150)
+            with col_title:
+                st.title(f"⚙️ Configuration - {app_name}")
+        except:
+            st.title(f"⚙️ Configuration - {app_name}")
+    else:
+        st.title(f"⚙️ Configuration - {app_name}")
     tab1, tab2, tab3, tab4 = st.tabs(["Branding", "Keywords", "RSS Feeds", "Change Password"])
     
     with tab1:
