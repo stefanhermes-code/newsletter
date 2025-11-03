@@ -109,47 +109,16 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
                         st.session_state.selected_article_ids.discard(article_id)
             
             with col2:
-                # Article info
-                st.markdown(f"### {article.get('title', 'No Title')}")
+                # Article info: Title as hyperlink, published date only
+                title = article.get('title', 'No Title')
+                url = article.get('url', '#')
+                st.markdown(f"### [{title}]({url})")
+                st.caption(f"📅 {article.get('published_date', 'Unknown')}")
                 
-                col_info1, col_info2, col_info3 = st.columns(3)
-                
-                with col_info1:
-                    st.caption(f"📰 **Source:** {article.get('source', 'Unknown')}")
-                
-                with col_info2:
-                    st.caption(f"📅 **Date:** {article.get('published_date', 'Unknown')}")
-                
-                with col_info3:
-                    method_icon = "🔍" if article.get('found_via') == 'google' else "📡"
-                    st.caption(f"{method_icon} **Via:** {article.get('found_via', 'unknown').upper()}")
-                
-                # Snippet
+                # Optional snippet
                 snippet = article.get('snippet', '')
                 if snippet:
                     st.write(snippet[:200] + "..." if len(snippet) > 200 else snippet)
-                
-                # Actions
-                col_action1, col_action2 = st.columns([1, 10])
-                
-                with col_action1:
-                    # Preview button
-                    preview_key = f"preview_{article_id}"
-                    if st.button("👁️ Preview", key=preview_key):
-                        st.session_state[f'preview_article_{article_id}'] = True
-                
-                with col_action2:
-                    # Open link button
-                    st.markdown(f"[🔗 Open Article]({article.get('url', '#')})")
-                
-                # Preview section (if triggered)
-                if st.session_state.get(f'preview_article_{article_id}', False):
-                    with st.expander("📄 Article Preview", expanded=True):
-                        preview_article(article)
-                        # Close preview button
-                        if st.button("Close Preview", key=f"close_preview_{article_id}"):
-                            st.session_state[f'preview_article_{article_id}'] = False
-                            st.rerun()
             
             st.markdown("---")
     
