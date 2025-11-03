@@ -68,6 +68,9 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
     
     # Search each keyword separately to get better coverage
     for keyword in keywords:
+        # If we've already reached the global max, stop searching
+        if len(articles) >= max_results:
+            break
         try:
             # Google News RSS URL
             params = {
@@ -87,8 +90,8 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
             # Parse RSS feed
             feed = feedparser.parse(response.content)
             
-            # Process entries
-            for entry in feed.entries[:max_results // len(keywords)]:
+            # Process entries (no per-keyword slicing; enforce global cap instead)
+            for entry in feed.entries:
                 article_url = entry.get("link", "")
                 
                 # Skip duplicates
@@ -130,6 +133,10 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
                 })
                 
                 seen_urls.add(article_url)
+                
+                # Enforce global maximum results
+                if len(articles) >= max_results:
+                    break
             
             # Rate limiting
             time.sleep(0.5)
