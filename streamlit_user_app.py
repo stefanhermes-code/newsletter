@@ -68,7 +68,7 @@ def main():
             # Check if file exists locally
             if os.path.exists(logo_path):
                 try:
-                    st.image(logo_path, use_container_width=True)
+                    st.image(logo_path, width=200)  # Fixed width instead of full container
                     logo_displayed = True
                     break
                 except Exception as e:
@@ -78,7 +78,7 @@ def main():
         if not logo_displayed:
             for logo_path in logo_paths:
                 try:
-                    st.image(logo_path, use_container_width=True)
+                    st.image(logo_path, width=200)  # Fixed width instead of full container
                     logo_displayed = True
                     break
                 except:
@@ -145,7 +145,7 @@ def main():
     for path in sidebar_logo_paths:
         if os.path.exists(path):
             try:
-                st.sidebar.image(path, use_container_width=True)
+                st.sidebar.image(path, width=150)  # Smaller width for sidebar
                 st.sidebar.markdown("---")
                 sidebar_logo_found = True
                 break
@@ -154,11 +154,11 @@ def main():
     if not sidebar_logo_found:
         # Try to display anyway (might work on Streamlit Cloud from GitHub)
         try:
-            st.sidebar.image("assets/GNP Logo.png", use_container_width=True)
+            st.sidebar.image("assets/GNP Logo.png", width=150)  # Smaller width for sidebar
             st.sidebar.markdown("---")
         except:
             try:
-                st.sidebar.image("GNP logo.png", use_container_width=True)
+                st.sidebar.image("GNP logo.png", width=150)  # Smaller width for sidebar
                 st.sidebar.markdown("---")
             except:
                 pass  # If logo not found, continue without it

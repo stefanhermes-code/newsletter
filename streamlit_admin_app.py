@@ -43,7 +43,7 @@ def main():
     for path in sidebar_logo_paths:
         if os.path.exists(path):
             try:
-                st.sidebar.image(path, use_container_width=True)
+                st.sidebar.image(path, width=150)  # Smaller width for sidebar
                 st.sidebar.markdown("---")
                 sidebar_logo_found = True
                 break
@@ -53,7 +53,7 @@ def main():
         # Try to display anyway (might work on Streamlit Cloud from GitHub)
         for path in sidebar_logo_paths:
             try:
-                st.sidebar.image(path, use_container_width=True)
+                st.sidebar.image(path, width=150)  # Smaller width for sidebar
                 st.sidebar.markdown("---")
                 break
             except:
