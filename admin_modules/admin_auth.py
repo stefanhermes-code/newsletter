@@ -52,10 +52,30 @@ def authenticate_admin(username: str, password: str) -> Tuple[bool, str]:
 def render_login_page():
     """Render admin login page"""
     # Display GNP logo at top
-    try:
-        st.image("assets/GNP Logo.png", use_container_width=True)
-    except:
-        pass  # If logo not found, continue without it
+    import os
+    logo_paths = [
+        "assets/GNP Logo.png",  # GitHub location (primary)
+        "assets/GNP logo.png",
+        "GNP Logo.png",  # Root directory (local fallback)
+        "GNP logo.png"
+    ]
+    logo_displayed = False
+    for logo_path in logo_paths:
+        if os.path.exists(logo_path):
+            try:
+                st.image(logo_path, use_container_width=True)
+                logo_displayed = True
+                break
+            except Exception as e:
+                continue
+    # If not found locally, try to display anyway (for Streamlit Cloud)
+    if not logo_displayed:
+        for logo_path in logo_paths:
+            try:
+                st.image(logo_path, use_container_width=True)
+                break
+            except:
+                continue
     
     st.title("🔐 Admin Dashboard - Login")
     st.markdown("Please enter your admin credentials to access the dashboard.")
