@@ -256,12 +256,30 @@ def main():
         
         # Update if changed (only rerun if actually changed)
         if selected_customer_id != current_customer_id:
+            # Remember previous company to clear any per-company caches
+            previous_customer_id = current_customer_id
+            
+            # Update current company in session state (single source of truth)
             st.session_state.current_customer_id = selected_customer_id
             current_customer_id = selected_customer_id
-            # Clear config cache
-            cache_key = f'customer_config_{current_customer_id}'
-            if cache_key in st.session_state:
-                del st.session_state[cache_key]
+            
+            # Clear any cached customer configs to force fresh load after rerun
+            # Clear for previous company
+            prev_key = f'customer_config_{previous_customer_id}'
+            if previous_customer_id and prev_key in st.session_state:
+                del st.session_state[prev_key]
+            # Clear for new company (in case it existed)
+            new_key = f'customer_config_{current_customer_id}'
+            if new_key in st.session_state:
+                del st.session_state[new_key]
+            # Clear any residual keys matching the pattern just to be safe
+            keys_to_delete = [k for k in st.session_state.keys() if str(k).startswith('customer_config_')]
+            for k in keys_to_delete:
+                if k not in ('user_app_current_page', 'current_customer_id'):
+                    try:
+                        del st.session_state[k]
+                    except Exception:
+                        pass
             # Preserve page selection
             if 'user_app_current_page' not in st.session_state:
                 st.session_state.user_app_current_page = "Dashboard"
