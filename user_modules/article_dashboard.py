@@ -7,6 +7,7 @@ for newsletter generation.
 
 import streamlit as st
 from typing import List, Dict, Optional
+from datetime import datetime, date
 from user_modules.news_finder import get_article_content
 import logging
 
@@ -39,35 +40,62 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     # Filters
     col1, col2, col3 = st.columns(3)
     
+    # Date range filter
     with col1:
-        filter_source = st.selectbox(
-            "Filter by Source",
-            ["All"] + list(set(a.get("source", "Unknown") for a in articles)),
-            key="article_filter_source"
-        )
+        st.caption("Filter by Date")
+        # Determine default bounds from data
+        dates = []
+        for a in articles:
+            try:
+                dates.append(datetime.fromisoformat(a.get("published_datetime", a.get("published_date", ""))).date())
+            except Exception:
+                try:
+                    dates.append(datetime.strptime(a.get("published_date", ""), "%Y-%m-%d").date())
+                except Exception:
+                    pass
+        min_date = min(dates) if dates else None
+        max_date = max(dates) if dates else None
+        start_date = st.date_input("From", value=min_date if min_date else date.today(), key="filter_from_date")
+        end_date = st.date_input("To", value=max_date if max_date else date.today(), key="filter_to_date")
     
+    # Keyword(s) filter (comma or space separated)
     with col2:
-        filter_method = st.selectbox(
-            "Filter by Method",
-            ["All", "Google", "RSS"],
-            key="article_filter_method"
-        )
+        st.caption("Filter by Keyword(s)")
+        keywords_query = st.text_input("Keywords", value="", key="article_filter_keywords", help="Enter words separated by comma or space")
     
+    # Category info only (not a filter for now)
     with col3:
-        filter_category = st.selectbox(
-            "Filter by Category",
-            ["All"] + list(set(a.get("category", "Other") for a in articles)),
-            key="article_filter_category"
-        )
+        st.caption("Category info")
+        st.write("Category = matched keyword (Google) or feed name (RSS)")
     
     # Apply filters
     filtered_articles = articles
-    if filter_source != "All":
-        filtered_articles = [a for a in filtered_articles if a.get("source") == filter_source]
-    if filter_method != "All":
-        filtered_articles = [a for a in filtered_articles if a.get("found_via", "").lower() == filter_method.lower()]
-    if filter_category != "All":
-        filtered_articles = [a for a in filtered_articles if a.get("category") == filter_category]
+    # Date range apply
+    if start_date and end_date:
+        def in_range(a: Dict) -> bool:
+            d = None
+            for fmt in ("%Y-%m-%d",):
+                try:
+                    d = datetime.strptime(a.get("published_date", ""), fmt).date()
+                    break
+                except Exception:
+                    continue
+            # fallback try isoformat from published_datetime
+            if d is None:
+                try:
+                    d = datetime.fromisoformat(a.get("published_datetime", "")).date()
+                except Exception:
+                    return True  # if unknown, don't exclude
+            return start_date <= d <= end_date
+        filtered_articles = [a for a in filtered_articles if in_range(a)]
+    
+    # Keywords apply (all tokens must appear)
+    if keywords_query.strip():
+        tokens = [t.lower() for t in keywords_query.replace(',', ' ').split() if t.strip()]
+        def match_kw(a: Dict) -> bool:
+            hay = f"{a.get('title','')} {a.get('snippet','')} {a.get('category','')}".lower()
+            return all(t in hay for t in tokens)
+        filtered_articles = [a for a in filtered_articles if match_kw(a)]
     
     st.write(f"**Showing {len(filtered_articles)} articles** (filtered)")
     
