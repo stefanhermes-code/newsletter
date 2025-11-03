@@ -206,12 +206,16 @@ def main():
     if current_page_from_state in available_pages:
         current_page_idx = available_pages.index(current_page_from_state)
     
-    # Render navigation selectbox
+    # Navigation title for consistent styling with Company
+    st.sidebar.title("🧭 Navigation")
+    
+    # Render navigation selectbox (label hidden for consistent font sizing)
     page = st.sidebar.selectbox(
-        "Navigation", 
-        available_pages, 
+        "",
+        available_pages,
         index=current_page_idx,  # Use index from session state
-        key="user_app_nav_selectbox"
+        key="user_app_nav_selectbox",
+        label_visibility="collapsed"
     )
     
     # Update session state when page changes
@@ -221,7 +225,7 @@ def main():
     st.sidebar.markdown("---")
     
     # Company Selector (THIRD - renamed from "Newsletter")
-    st.sidebar.title("🏢 Company Selector")
+    st.sidebar.title("🏢 Company")
     
     # Newsletter selector dropdown - SIMPLE DIRECT IMPLEMENTATION
     if user_newsletters and len(user_newsletters) > 0:
@@ -237,10 +241,11 @@ def main():
             )
         
         selected_name = st.sidebar.selectbox(
-            "Select Company",
+            "",
             newsletter_names,
             index=current_index,
-            key="company_selector_sidebar"
+            key="company_selector_sidebar",
+            label_visibility="collapsed"
         )
         
         # Get selected customer ID
@@ -267,25 +272,12 @@ def main():
         current_customer_id = user_newsletters[0]['customer_id']
         st.session_state.current_customer_id = current_customer_id
     
-    # Get current newsletter info
+    # Get current newsletter info (no tier display needed)
     current_newsletter = next((n for n in user_newsletters 
                               if n['customer_id'] == current_customer_id), None)
     
-    if current_newsletter:
-        # Show tier indicator
-        st.sidebar.info(f"**Tier:** {current_newsletter.get('tier', 'Unknown').title()}")
-    
-    # Display customer logo in sidebar if available
-    if current_customer_id:
-        customer_config = customer_selector.load_customer_config(current_customer_id)
-        branding = customer_config.get('branding', {})
-        logo_path = branding.get('logo_path', '')
-        if logo_path:
-            try:
-                st.sidebar.markdown("---")
-                st.sidebar.image(logo_path, use_container_width=True)
-            except:
-                pass  # If logo not found, continue without it
+    # Note: Customer logo only shown in dashboard header, NOT in sidebar
+    # Sidebar always shows GNP logo only
     
     # Load customer config
     customer_config = customer_selector.load_customer_config(current_customer_id)
@@ -312,7 +304,9 @@ def main():
     elif page == "Newsletters":
         render_newsletters_viewer(current_customer_id, current_newsletter, user_email)
     elif page == "Configuration":
-        if has_edit_config:
+        # Re-check permission for current customer (in case company changed)
+        has_edit_config_current = customer_selector.has_permission(user_email, current_customer_id, "edit_config")
+        if has_edit_config_current:
             render_configuration(current_customer_id, user_email)
         else:
             st.error("You don't have permission to edit configuration. Premium tier required.")
