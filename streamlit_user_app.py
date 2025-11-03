@@ -229,7 +229,7 @@ def main():
     
     # Main content area
     if page == "Dashboard":
-        render_dashboard(customer_config, current_newsletter, user_email, current_customer_id)
+        render_dashboard(customer_config, current_newsletter, user_email, current_customer_id, user_newsletters)
     elif page == "Newsletters":
         render_newsletters_viewer(current_customer_id, current_newsletter, user_email)
     elif page == "Configuration":
@@ -238,25 +238,68 @@ def main():
         else:
             st.error("You don't have permission to edit configuration. Premium tier required.")
 
-def render_dashboard(customer_config, current_newsletter, user_email, customer_id):
+def render_dashboard(customer_config, current_newsletter, user_email, customer_id, user_newsletters):
     """Main dashboard - news finding and newsletter generation"""
     branding = customer_config.get('branding', {})
     app_name = branding.get('application_name', 'Newsletter')
     
-    # Display customer logo if available
+    # Display customer logo and title with newsletter switcher
     logo_path = branding.get('logo_path', '')
-    if logo_path:
-        try:
-            col_logo, col_title = st.columns([1, 4])
-            with col_logo:
-                st.image(logo_path, width=150)
-            with col_title:
-                st.title(f"Dashboard - {app_name}")
-        except:
-            # If logo not found, just show title
+    
+    # If user has multiple newsletters, show switcher
+    if len(user_newsletters) > 1:
+        col_logo, col_title, col_switcher = st.columns([1, 3, 2])
+        
+        with col_logo:
+            if logo_path:
+                try:
+                    st.image(logo_path, width=150)
+                except:
+                    pass
+        
+        with col_title:
             st.title(f"Dashboard - {app_name}")
+        
+        with col_switcher:
+            st.write("")  # Spacing
+            st.write("")  # Spacing
+            
+            # Newsletter switcher dropdown
+            newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
+            newsletter_names = list(newsletter_options.keys())
+            
+            # Find current index
+            current_index = next(
+                (i for i, n in enumerate(user_newsletters) 
+                 if n['customer_id'] == customer_id),
+                0
+            )
+            
+            selected_name = st.selectbox(
+                "📰 Switch Newsletter",
+                newsletter_names,
+                index=current_index,
+                key="newsletter_selector_dashboard"
+            )
+            
+            # Check if selection changed
+            selected_customer_id = newsletter_options[selected_name]
+            if selected_customer_id != customer_id:
+                customer_selector.set_current_customer(selected_customer_id)
+                st.rerun()
     else:
-        st.title(f"Dashboard - {app_name}")
+        # Single newsletter - just show logo and title
+        if logo_path:
+            try:
+                col_logo, col_title = st.columns([1, 4])
+                with col_logo:
+                    st.image(logo_path, width=150)
+                with col_title:
+                    st.title(f"Dashboard - {app_name}")
+            except:
+                st.title(f"Dashboard - {app_name}")
+        else:
+            st.title(f"Dashboard - {app_name}")
     
     # News Finding Section
     st.header("📰 Find News")
