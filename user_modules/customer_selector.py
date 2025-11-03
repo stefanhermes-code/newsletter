@@ -313,13 +313,7 @@ def render_newsletter_selector(user_newsletters: List[Dict], current_customer_id
     # Check if selection changed
     if selected_customer_id != current_customer_id:
         set_current_customer(selected_customer_id)
-        
-        # Sync dashboard selectbox widget if it exists (update its index)
-        dashboard_key = "newsletter_selector_dashboard"
-        if dashboard_key in st.session_state:
-            selected_index = newsletter_names.index(selected_name)
-            st.session_state[dashboard_key] = selected_index
-        
+        # After rerun, dashboard will read from the same current_customer_id state
         st.rerun()
     
     return selected_customer_id
