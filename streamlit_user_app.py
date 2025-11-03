@@ -366,6 +366,24 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
         st.write("")
         st.write("")
         find_button = st.button("🔍 Find News", type="primary")
+
+    # Optional diagnostics
+    with st.expander("Diagnostics (optional)"):
+        st.caption("Use to troubleshoot when results are empty.")
+        current_company_debug = st.session_state.get('current_customer_id', customer_id)
+        st.write(f"Current company: `{current_company_debug}`")
+        try:
+            debug_keywords = [k for k in config_manager.load_keywords(customer_id) if k]
+        except Exception:
+            debug_keywords = []
+        try:
+            debug_feeds_cfg = config_manager.load_feeds(customer_id)
+            debug_feed_urls = [f.get('url', '') for f in debug_feeds_cfg if f.get('enabled', True)]
+        except Exception:
+            debug_feed_urls = []
+        st.write(f"Keywords: {len(debug_keywords)} (showing up to 5): {debug_keywords[:5]}")
+        st.write(f"Feeds: {len(debug_feed_urls)} (showing up to 5): {debug_feed_urls[:5]}")
+        debug_mode = st.checkbox("Enable detailed debug for this run", key="enable_debug_news_run", value=False)
     
     # Find news functionality
     if find_button or st.session_state.is_finding_news:
@@ -398,13 +416,42 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 def progress_callback(message):
                     status_placeholder.info(message)
                 
-                # Find news
-                articles = news_finder.find_news_background(
-                    keywords=keywords,
-                    feed_urls=feed_urls,
-                    time_period=time_period,
-                    progress_callback=progress_callback
-                )
+                # Find news (normal or detailed debug)
+                if st.session_state.get('enable_debug_news_run'):
+                    st.info("Debug mode: running Google and RSS separately…")
+                    google_count = 0
+                    rss_count = 0
+                    combined = []
+                    try:
+                        if keywords:
+                            progress_callback("🔍 Searching Google News…")
+                            google_articles = news_finder.find_news_google(keywords, time_period)
+                            google_count = len(google_articles)
+                            combined.extend(google_articles)
+                    except Exception as e:
+                        st.error(f"Google search error: {e}")
+                    try:
+                        if feed_urls:
+                            progress_callback("📡 Checking RSS feeds…")
+                            rss_articles = news_finder.find_news_rss(feed_urls, time_period)
+                            rss_count = len(rss_articles)
+                            # Deduplicate by URL
+                            seen = set(a.get('url') for a in combined)
+                            for a in rss_articles:
+                                if a.get('url') not in seen:
+                                    combined.append(a)
+                                    seen.add(a.get('url'))
+                    except Exception as e:
+                        st.error(f"RSS parsing error: {e}")
+                    st.info(f"Debug totals → Google: {google_count}, RSS: {rss_count}, Combined: {len(combined)}")
+                    articles = sorted(combined, key=lambda x: x.get('published_datetime', ''), reverse=True)
+                else:
+                    articles = news_finder.find_news_background(
+                        keywords=keywords,
+                        feed_urls=feed_urls,
+                        time_period=time_period,
+                        progress_callback=progress_callback
+                    )
                 
                 st.session_state.found_articles = articles
                 st.session_state.is_finding_news = False
