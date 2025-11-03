@@ -273,7 +273,7 @@ def render_newsletter_selector(user_newsletters: List[Dict], current_customer_id
     
     Args:
         user_newsletters: List of newsletters user has access to
-        current_customer_id: Currently selected customer ID
+        current_customer_id: Currently selected customer ID (optional, reads from session state if not provided)
     
     Returns:
         Selected customer_id, or None if selection changed (trigger rerun)
@@ -281,23 +281,34 @@ def render_newsletter_selector(user_newsletters: List[Dict], current_customer_id
     if not user_newsletters:
         return None
     
-    # Create options dictionary
-    newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
-    newsletter_names = list(newsletter_options.keys())
+    # ALWAYS read from session state as source of truth (dashboard changes update this)
+    session_customer_id = get_current_customer()
     
-    # Find current index
-    if current_customer_id:
-        current_index = next(
-            (i for i, n in enumerate(user_newsletters) 
-             if n['customer_id'] == current_customer_id),
-            0
-        )
+    # Use session state value if available, otherwise use parameter, otherwise default to first
+    if session_customer_id:
+        actual_current_id = session_customer_id
+    elif current_customer_id:
+        actual_current_id = current_customer_id
     else:
-        current_index = 0
         # Auto-select first newsletter if none selected
         if user_newsletters:
             set_current_customer(user_newsletters[0]['customer_id'])
             return user_newsletters[0]['customer_id']
+        actual_current_id = None
+    
+    # Create options dictionary
+    newsletter_options = {n['name']: n['customer_id'] for n in user_newsletters}
+    newsletter_names = list(newsletter_options.keys())
+    
+    # Find current index based on actual current ID (from session state)
+    if actual_current_id:
+        current_index = next(
+            (i for i, n in enumerate(user_newsletters) 
+             if n['customer_id'] == actual_current_id),
+            0
+        )
+    else:
+        current_index = 0
     
     # Render selectbox
     selected_name = st.sidebar.selectbox(
@@ -310,11 +321,12 @@ def render_newsletter_selector(user_newsletters: List[Dict], current_customer_id
     # Get selected customer ID
     selected_customer_id = newsletter_options[selected_name]
     
-    # Check if selection changed
-    if selected_customer_id != current_customer_id:
+    # Check if selection changed (compare against session state value)
+    if selected_customer_id != actual_current_id:
         set_current_customer(selected_customer_id)
         # After rerun, dashboard will read from the same current_customer_id state
         st.rerun()
+        return selected_customer_id
     
     return selected_customer_id
 
