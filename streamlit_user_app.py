@@ -218,18 +218,43 @@ def main():
         available_pages.append("Configuration")
     
     # Preserve page selection in session state to prevent unwanted navigation changes
+    # Initialize if not exists, but NEVER override if it already exists (preserves user selection)
     if 'user_app_current_page' not in st.session_state:
         st.session_state.user_app_current_page = "Dashboard"
     
-    # Get current page from session state or default to Dashboard
+    # Get current page from session state (this is the source of truth)
+    current_page_from_state = st.session_state.user_app_current_page
+    
+    # Find index for selectbox
     current_page_idx = 0
-    if st.session_state.user_app_current_page in available_pages:
-        current_page_idx = available_pages.index(st.session_state.user_app_current_page)
+    if current_page_from_state in available_pages:
+        current_page_idx = available_pages.index(current_page_from_state)
     
-    page = st.sidebar.selectbox("Navigation", available_pages, index=current_page_idx, key="user_app_nav_selectbox")
+    # Render navigation selectbox
+    # CRITICAL: Use session state as source of truth - force widget to match session state
+    # The widget key ensures identity, but we control the value via index parameter
+    nav_key = "user_app_nav_selectbox"
     
-    # Update session state when page changes
-    if page != st.session_state.user_app_current_page:
+    # If widget exists in session state but doesn't match our desired page, update it
+    # This handles cases where newsletter change causes rerun
+    if nav_key in st.session_state:
+        widget_value = st.session_state[nav_key]
+        if widget_value != current_page_from_state:
+            # Widget state doesn't match session state - force it to match
+            # Delete the widget state so it resets to our index
+            del st.session_state[nav_key]
+    
+    page = st.sidebar.selectbox(
+        "Navigation", 
+        available_pages, 
+        index=current_page_idx,  # Force index from session state
+        key=nav_key
+    )
+    
+    # Only update session state if this is a genuine user change
+    # (i.e., widget value differs from what we set it to)
+    if page != current_page_from_state:
+        # User manually changed navigation - update session state
         st.session_state.user_app_current_page = page
     
     # Load customer config
@@ -317,9 +342,12 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             # If changed, update session state (source of truth) and rerun
             # The rerun will cause sidebar to also update since it reads from same state
             if selected_customer_id != current_customer_id_state:
-                # Preserve the Dashboard page selection (prevent navigation to Newsletter section)
-                if 'user_app_current_page' not in st.session_state:
-                    st.session_state.user_app_current_page = "Dashboard"
+                # CRITICAL: Preserve the current page BEFORE rerun to prevent navigation change
+                # Read current page from widget state if available, otherwise from session state
+                current_page = st.session_state.get('user_app_current_page', 'Dashboard')
+                # Explicitly preserve it
+                st.session_state.user_app_current_page = current_page
+                
                 customer_selector.set_current_customer(selected_customer_id)
                 # Clear any article selections when switching newsletters
                 if 'selected_article_ids' in st.session_state:
