@@ -8,7 +8,9 @@ Direct generation (no draft step).
 import streamlit as st
 from datetime import datetime
 from typing import List, Dict, Optional
-from user_modules.github_user import save_newsletter
+from user_modules.github_user import save_newsletter, get_repo
+import base64
+from urllib.parse import quote
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,14 +58,28 @@ def generate_newsletter(selected_articles: List[Dict], branding: Dict, customer_
         filename = f"Newsletter_Week_{week_number:02d}_{year}.html"
     
     # Build HTML
-    # Build a raw GitHub URL for logo so it renders in preview/email
+    # Build a data URI or raw URL for the logo so it renders in preview/email
     logo_url = ""
     if logo_path:
-        repo_name = st.secrets.get("github_repo", "") if hasattr(st, 'secrets') else ""
-        if repo_name:
-            logo_url = f"https://raw.githubusercontent.com/{repo_name}/main/{logo_path}"
-        else:
-            logo_url = logo_path
+        # Try to fetch the logo content from GitHub to embed as data URI (works for private repos)
+        try:
+            repo = get_repo()
+            if repo:
+                file = repo.get_contents(logo_path)
+                content_b64 = file.content  # already base64
+                # Guess mime
+                ext = logo_path.split('.')[-1].lower()
+                mime = 'image/png' if ext in ('png',) else 'image/jpeg'
+                logo_url = f"data:{mime};base64,{content_b64}"
+            else:
+                raise Exception("repo unavailable")
+        except Exception:
+            # Fallback to public raw link (only works for public repos)
+            repo_name = st.secrets.get("github_repo", "") if hasattr(st, 'secrets') else ""
+            if repo_name:
+                logo_url = f"https://raw.githubusercontent.com/{repo_name}/main/{quote(logo_path)}"
+            else:
+                logo_url = logo_path
 
     html_content = format_html_newsletter(
         selected_articles,
