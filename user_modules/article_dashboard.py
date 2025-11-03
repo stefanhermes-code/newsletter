@@ -153,7 +153,10 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
                 # Optional snippet
                 snippet = article.get('snippet', '')
                 if snippet:
-                    st.write(snippet[:200] + "..." if len(snippet) > 200 else snippet)
+                    # Strip any HTML tags/anchors and show plain text only
+                    snippet_clean = re.sub(r"<[^>]+>", "", snippet)
+                    text = snippet_clean.strip()
+                    st.write(text[:200] + "..." if len(text) > 200 else text)
             
             st.markdown("---")
     
