@@ -278,6 +278,10 @@ def main():
                         del st.session_state[k]
                     except Exception:
                         pass
+            # Clear search/results and selections when switching company
+            st.session_state.found_articles = []
+            st.session_state.selected_article_ids = set()
+            
             # Preserve page selection
             if 'user_app_current_page' not in st.session_state:
                 st.session_state.user_app_current_page = "Dashboard"
