@@ -13,6 +13,7 @@ from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
 import feedparser
 import logging
+import re
 import time
 import hashlib
 import re
@@ -282,13 +283,31 @@ def find_news_background(keywords: List[str], feed_urls: List[str], time_period:
                 all_articles.append(article)
                 seen_urls.add(article["url"])
     
-    # Remove exact duplicates (same URL)
+    # De-duplicate by URL and by normalized title (to remove same story from different sources)
+    def normalize_title(title: str) -> str:
+        if not title:
+            return ""
+        # Drop site suffix commonly after ' - ' or ' | '
+        base = title.split(" - ")[0].split(" | ")[0]
+        # Keep alnum and spaces, collapse whitespace
+        base = re.sub(r"[^A-Za-z0-9 ]+", " ", base)
+        base = re.sub(r"\s+", " ", base).strip().lower()
+        return base
+
     unique_articles = []
-    seen = set()
+    seen_urls = set()
+    seen_titles = set()
     for article in all_articles:
-        if article["url"] not in seen:
-            unique_articles.append(article)
-            seen.add(article["url"])
+        url = article.get("url", "")
+        norm = normalize_title(article.get("title", ""))
+        if url in seen_urls:
+            continue
+        if norm and norm in seen_titles:
+            continue
+        unique_articles.append(article)
+        seen_urls.add(url)
+        if norm:
+            seen_titles.add(norm)
     
     # Sort by published date (newest first)
     unique_articles.sort(key=lambda x: x.get("published_datetime", ""), reverse=True)
