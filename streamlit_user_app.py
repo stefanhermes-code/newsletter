@@ -417,6 +417,47 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     
     st.markdown("---")
     
+    # Newsletter Generation (moved up for better UX)
+    st.header("📰 Generate Newsletter")
+    can_generate = current_newsletter and 'generate' in current_newsletter.get('permissions', [])
+    if can_generate:
+        selected_count = len(st.session_state.selected_article_ids)
+        st.write(f"**{selected_count} articles selected**")
+        if selected_count == 0:
+            st.warning("Please select at least one article to generate a newsletter.")
+        else:
+            short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
+            generate_button = st.button("📰 Generate Newsletter", type="primary")
+            if generate_button:
+                selected_articles = article_dashboard.select_articles(
+                    list(st.session_state.selected_article_ids),
+                    st.session_state.found_articles
+                )
+                if selected_articles:
+                    with st.spinner("Generating newsletter..."):
+                        filename = newsletter_generator.generate_newsletter(
+                            selected_articles=selected_articles,
+                            branding=branding,
+                            customer_id=customer_id,
+                            short_name=short_name
+                        )
+                        if filename:
+                            st.success(f"Newsletter generated and saved: {filename}")
+                            newsletter_html = newsletter_generator.get_newsletter_preview(
+                                selected_articles,
+                                branding
+                            )
+                            st.markdown("### Newsletter Preview")
+                            st.components.v1.html(newsletter_html, height=600, scrolling=True)
+                            newsletter_generator.download_newsletter(newsletter_html, filename)
+                            st.session_state.selected_article_ids = set()
+                else:
+                    st.error("Failed to retrieve selected articles.")
+    else:
+        st.warning("You don't have permission to generate newsletters. Standard or Premium tier required.")
+    
+    st.markdown("---")
+    
     # Article Dashboard
     st.header("📋 Articles")
     
@@ -437,64 +478,7 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     else:
         st.info("Click 'Find News' to search for articles based on your keywords and RSS feeds.")
     
-    st.markdown("---")
-    
-    # Newsletter Generation
-    st.header("📰 Generate Newsletter")
-    
-    # Check if user has generate permission
-    can_generate = current_newsletter and 'generate' in current_newsletter.get('permissions', [])
-    
-    if can_generate:
-        selected_count = len(st.session_state.selected_article_ids)
-        st.write(f"**{selected_count} articles selected**")
-        
-        if selected_count == 0:
-            st.warning("Please select at least one article to generate a newsletter.")
-        else:
-            # Get short name from branding or customer_id
-            # Check if there's a 'short_name' in branding config (might be in a different structure)
-            short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
-            
-            generate_button = st.button("📰 Generate Newsletter", type="primary")
-            
-            if generate_button:
-                # Get selected articles
-                selected_articles = article_dashboard.select_articles(
-                    list(st.session_state.selected_article_ids),
-                    st.session_state.found_articles
-                )
-                
-                if selected_articles:
-                    with st.spinner("Generating newsletter..."):
-                        filename = newsletter_generator.generate_newsletter(
-                            selected_articles=selected_articles,
-                            branding=branding,
-                            customer_id=customer_id,
-                            short_name=short_name
-                        )
-                        
-                        if filename:
-                            st.success(f"Newsletter generated and saved: {filename}")
-                            
-                            # Get newsletter content for preview/download
-                            newsletter_html = newsletter_generator.get_newsletter_preview(
-                                selected_articles,
-                                branding
-                            )
-                            
-                            st.markdown("### Newsletter Preview")
-                            st.components.v1.html(newsletter_html, height=600, scrolling=True)
-                            
-                            newsletter_generator.download_newsletter(newsletter_html, filename)
-                            
-                            # Clear selection after generation to prevent reusing articles
-                            st.session_state.selected_article_ids = set()
-                            # Do not rerun — keep preview visible
-                else:
-                    st.error("Failed to retrieve selected articles.")
-    else:
-        st.warning("You don't have permission to generate newsletters. Standard or Premium tier required.")
+    # (newsletter generation moved above)
 
 def render_newsletters_viewer(customer_id, current_newsletter, user_email):
     """View generated newsletters"""
