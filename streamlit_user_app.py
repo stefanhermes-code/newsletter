@@ -408,6 +408,8 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 keywords = [k for k in config_manager.load_keywords(current_customer_id) if k]
                 feeds_config = config_manager.load_feeds(current_customer_id)
                 feed_urls = [f['url'] for f in feeds_config if f.get('enabled', True)]
+                # Temporarily disable RSS fetching (bogus URLs causing long loops)
+                feed_urls = []
                 
                 # Check if we have keywords or feeds
                 if not keywords and not feed_urls:
