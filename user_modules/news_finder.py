@@ -66,11 +66,8 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
     # Using Google News RSS feed approach (more reliable than scraping)
     base_url = "https://news.google.com/rss/search"
     
-    # Search each keyword separately to get better coverage
+    # Search each keyword separately to get better coverage (no global cap)
     for keyword in keywords:
-        # If we've already reached the global max, stop searching
-        if len(articles) >= max_results:
-            break
         try:
             # Google News RSS URL
             params = {
@@ -90,7 +87,7 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
             # Parse RSS feed
             feed = feedparser.parse(response.content)
             
-            # Process entries (no per-keyword slicing; enforce global cap instead)
+            # Process entries (no per-keyword slicing; no global cap)
             for entry in feed.entries:
                 article_url = entry.get("link", "")
                 
@@ -133,13 +130,9 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
                 })
                 
                 seen_urls.add(article_url)
-                
-                # Enforce global maximum results
-                if len(articles) >= max_results:
-                    break
+                # No global cap: collect all results
             
-            # Rate limiting
-            time.sleep(0.5)
+            # Removed rate limiting sleep to speed up searches
         
         except Exception as e:
             logger.error(f"Error searching Google News for keyword '{keyword}': {e}")
@@ -148,7 +141,7 @@ def find_news_google(keywords: List[str], time_period: str = "Last 7 days", max_
     # Sort by published date (newest first)
     articles.sort(key=lambda x: x.get("published_datetime", ""), reverse=True)
     
-    return articles[:max_results]
+    return articles
 
 def find_news_rss(feed_urls: List[str], time_period: str = "Last 7 days") -> List[Dict]:
     """
