@@ -2,7 +2,7 @@
   "application_name": "APBA NewsBulletin",
   "short_name": "APBA",
   "newsletter_title_template": "{name} - Week {week}",
-  "logo_path": "customers/gnp0002/assets/logo.jpg",
+  "logo_path": "customers/gnp0002/assets/APBA logo.png",
   "footer_text": "",
   "footer_url": "",
   "footer_url_display": "",
