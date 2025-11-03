@@ -289,17 +289,10 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             # Get selected customer ID
             selected_customer_id = newsletter_options[selected_name]
             
-            # If changed, update session state and sync sidebar widget
+            # If changed, update session state (source of truth)
+            # After rerun, sidebar will read from this same state
             if selected_customer_id != current_customer_id_state:
-                # Update the session state (source of truth)
                 customer_selector.set_current_customer(selected_customer_id)
-                
-                # Sync sidebar selectbox widget by updating its index
-                # The sidebar widget key stores the index
-                sidebar_key = "newsletter_selector_sidebar"
-                selected_index = newsletter_names.index(selected_name)
-                st.session_state[sidebar_key] = selected_index
-                
                 st.rerun()
     else:
         # Single newsletter - just show logo and title
