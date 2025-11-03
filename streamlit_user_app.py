@@ -390,6 +390,11 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
         if not st.session_state.is_finding_news:
             st.session_state.is_finding_news = True
         
+        # Prepare UI placeholders up front
+        status_placeholder = st.empty()
+        count_placeholder = st.empty()
+        stream_placeholder = st.empty()
+        
         with st.spinner("Finding news articles..."):
             try:
                 # Get current customer ID from session state (ensure it's up to date)
@@ -410,11 +415,7 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                     st.session_state.is_finding_news = False
                     st.stop()
                 
-                # Progress + streaming placeholders
-                status_placeholder = st.empty()
-                count_placeholder = st.empty()
-                stream_placeholder = st.empty()
-                
+                # Progress callback
                 def progress_callback(message):
                     status_placeholder.info(message)
                 
@@ -433,11 +434,8 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                                 if url and url not in seen_urls_stream:
                                     st.session_state.found_articles.append(a)
                                     seen_urls_stream.add(url)
-                            # Update running count and a small rolling preview (last 10 titles)
+                            # Update running count only
                             count_placeholder.info(f"Google results so far: {len([a for a in st.session_state.found_articles if a.get('found_via')=='google'])} | Total: {len(st.session_state.found_articles)}")
-                            latest = st.session_state.found_articles[-10:]
-                            stream_titles = "\n".join([f"- {a.get('title','')[:100]}" for a in latest if a.get('title')])
-                            stream_placeholder.markdown(f"**Latest articles:**\n\n{stream_titles}")
                         except Exception as e:
                             st.warning(f"Google error for keyword '{kw}': {e}")
                 
@@ -453,9 +451,6 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                                     st.session_state.found_articles.append(a)
                                     seen_urls_stream.add(url)
                             count_placeholder.info(f"Including RSS: {len(st.session_state.found_articles)} total")
-                            latest = st.session_state.found_articles[-10:]
-                            stream_titles = "\n".join([f"- {a.get('title','')[:100]}" for a in latest if a.get('title')])
-                            stream_placeholder.markdown(f"**Latest articles:**\n\n{stream_titles}")
                         except Exception as e:
                             st.warning(f"RSS error for feed '{feed_url}': {e}")
                 
@@ -463,18 +458,18 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 articles = sorted(st.session_state.found_articles, key=lambda x: x.get('published_datetime', ''), reverse=True)
                 
                 st.session_state.found_articles = articles
+            except Exception as e:
+                st.error(f"Error finding news: {str(e)}")
+            finally:
+                # Always finalize to avoid stuck spinner
                 st.session_state.is_finding_news = False
                 status_placeholder.empty()
+                stream_placeholder.empty()
                 
                 if articles:
                     st.success(f"✅ Found {len(articles)} articles")
                 else:
                     st.info("No articles found. Try adjusting your keywords or time period.")
-                    
-            except Exception as e:
-                st.error(f"Error finding news: {str(e)}")
-                st.session_state.is_finding_news = False
-                status_placeholder.empty()
     
     st.markdown("---")
     
