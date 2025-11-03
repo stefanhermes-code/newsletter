@@ -492,7 +492,7 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                             
                             # Clear selection after generation to prevent reusing articles
                             st.session_state.selected_article_ids = set()
-                            st.rerun()
+                            # Do not rerun — keep preview visible
                 else:
                     st.error("Failed to retrieve selected articles.")
     else:
