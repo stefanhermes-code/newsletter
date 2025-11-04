@@ -33,8 +33,12 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
         return selected_article_ids
     
     # Initialize selected articles in session state if needed
+    # Always preserve existing selections - don't overwrite them
     if 'selected_article_ids' not in st.session_state:
-        st.session_state.selected_article_ids = selected_article_ids.copy()
+        st.session_state.selected_article_ids = selected_article_ids.copy() if selected_article_ids else set()
+    # Ensure we're working with a set (not accidentally resetting it)
+    if not isinstance(st.session_state.selected_article_ids, set):
+        st.session_state.selected_article_ids = set(st.session_state.selected_article_ids)
     
     st.write(f"**Found {len(articles)} articles**")
     
@@ -110,10 +114,14 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     st.write(f"**Showing {len(filtered_articles)} articles** (filtered)")
 
     # Selection controls - inline, left-aligned
+    # Note: "Select All" only selects currently visible (filtered) articles
+    # Previously selected articles that are now filtered out remain selected
     btn_col1, btn_col2, _ = st.columns([1, 1, 8])
     with btn_col1:
         if st.button("Select All", key="select_all_articles"):
-            st.session_state.selected_article_ids = set(a["article_id"] for a in filtered_articles)
+            # Add all filtered articles to selection (don't replace - add to existing)
+            for article in filtered_articles:
+                st.session_state.selected_article_ids.add(article.get("article_id", ""))
             st.rerun()
     with btn_col2:
         if st.button("Clear Selection", key="clear_selection"):
@@ -125,6 +133,7 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
     # Display articles
     for idx, article in enumerate(filtered_articles):
         article_id = article.get("article_id", str(idx))
+        # Always read current state from session state (not from previous render)
         is_selected = article_id in st.session_state.selected_article_ids
         
         # Article card
@@ -132,14 +141,17 @@ def display_articles(articles: List[Dict], selected_article_ids: Optional[set] =
             col1, col2 = st.columns([1, 10])
             
             with col1:
-                # Checkbox for selection
+                # Checkbox for selection - always use session state as source of truth
                 selected = st.checkbox(
                     "",
                     value=is_selected,
                     key=f"article_checkbox_{article_id}"
                 )
                 
-                if selected != is_selected:
+                # Update session state if checkbox state changed
+                # Read current session state again to avoid race conditions
+                currently_selected = article_id in st.session_state.selected_article_ids
+                if selected != currently_selected:
                     if selected:
                         st.session_state.selected_article_ids.add(article_id)
                     else:
