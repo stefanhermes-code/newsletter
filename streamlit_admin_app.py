@@ -44,7 +44,6 @@ def main():
         if os.path.exists(path):
             try:
                 st.sidebar.image(path, width=150)  # Smaller width for sidebar
-                st.sidebar.markdown("---")
                 sidebar_logo_found = True
                 break
             except Exception as e:
@@ -54,22 +53,22 @@ def main():
         for path in sidebar_logo_paths:
             try:
                 st.sidebar.image(path, width=150)  # Smaller width for sidebar
-                st.sidebar.markdown("---")
                 break
             except:
                 continue
     
-    # Show logout button in sidebar
-    st.sidebar.markdown("---")
+    # Logout button directly after logo (matching User App layout)
     if st.sidebar.button("🚪 Logout", key="admin_logout"):
         admin_auth.logout_admin()
         return
     
     if st.session_state.get('admin_username'):
         st.sidebar.caption(f"Logged in as: **{st.session_state.admin_username}**")
-    # Sidebar navigation
-    st.sidebar.title("📊 Admin Dashboard")
+    
     st.sidebar.markdown("---")
+    
+    # Navigation title with emoji (matching User App style)
+    st.sidebar.title("🧭 Navigation")
     
     # Navigation options
     nav_options = [
@@ -88,10 +87,11 @@ def main():
     
     # Render selectbox - it will update session state when changed
     selected_page = st.sidebar.selectbox(
-        "Navigation",
+        "Select page",
         nav_options,
         index=nav_options.index(st.session_state.current_admin_page),
-        key="admin_nav_selectbox"
+        key="admin_nav_selectbox",
+        label_visibility="collapsed"  # Hide label for consistency with User App
     )
     
     # Update session state if user changed selectbox (selectbox drives navigation)
@@ -244,8 +244,6 @@ def render_customer_management():
             st.info("No customers found. Use 'Customer Onboarding' to create your first customer.")
     
     if tab2:
-        st.subheader("Customer Details")
-        
         # Customer selector
         all_customer_ids = ["-- Select Customer --"] + list_all_customers()
         selected_id = st.selectbox(
@@ -260,6 +258,26 @@ def render_customer_management():
             details = customer_manager.get_customer_details(selected_id)
             
             if details:
+                # Display header with customer logo (matching User App style)
+                branding = details.get('branding', {})
+                logo_path = branding.get('logo_path', '')
+                app_name = branding.get('application_name', 'Newsletter')
+                company_name = details.get('info', {}).get('company_name', selected_id)
+                
+                if logo_path:
+                    try:
+                        col_logo, col_title = st.columns([1, 4])
+                        with col_logo:
+                            st.image(logo_path, width=150)
+                        with col_title:
+                            st.title(f"👥 Customer Details - {app_name}")
+                    except:
+                        st.title(f"👥 Customer Details - {company_name}")
+                else:
+                    st.title(f"👥 Customer Details - {company_name}")
+                
+                st.markdown("---")
+                
                 # Display customer info
                 col1, col2 = st.columns(2)
                 
