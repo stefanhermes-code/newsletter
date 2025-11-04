@@ -238,7 +238,6 @@ def format_html_newsletter(articles: List[Dict], title: str, application_name: s
             {f'<img class="logo" src="{logo_url}" alt="logo" />' if logo_url else ''}
             <div>
                 <h1 style="margin:0;">{title}</h1>
-                <div class="subtitle">{application_name}</div>
             </div>
         </div>
         
@@ -254,6 +253,19 @@ def format_html_newsletter(articles: List[Dict], title: str, application_name: s
         article_source = article.get('source', 'Unknown')
         article_date = article.get('published_date', '')
         article_snippet = article.get('snippet', '')
+        
+        # Remove title from snippet if it appears at the beginning (to avoid duplication)
+        if article_snippet and article_title:
+            snippet_lower = article_snippet.strip().lower()
+            title_lower = article_title.strip().lower()
+            # Check if snippet starts with title (with optional leading/trailing whitespace/punctuation)
+            if snippet_lower.startswith(title_lower):
+                # Remove the title from the snippet
+                snippet_clean = article_snippet[len(article_title):].strip()
+                # Remove any leading punctuation/separators (colons, dashes, etc.)
+                while snippet_clean and snippet_clean[0] in [':', '-', '—', ',', '.', ' ']:
+                    snippet_clean = snippet_clean[1:].strip()
+                article_snippet = snippet_clean
         
         html += f"""
         <div class="article">
