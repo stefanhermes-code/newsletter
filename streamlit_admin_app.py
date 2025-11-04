@@ -334,9 +334,24 @@ def render_customer_management():
                 with col2:
                     # Delete customer (dangerous action)
                     st.warning("⚠️ **Danger Zone**")
-                    if st.button("🗑️ Delete Customer", key=f"delete_customer_{selected_id}", type="secondary"):
-                        st.error("⚠️ Customer deletion is not yet implemented. To delete a customer, manually remove their folder from GitHub repository.")
-                        # TODO: Implement customer deletion (requires deleting entire folder from GitHub)
+                    st.caption("This will permanently remove the customer's data folder from the repository. This action cannot be undone.")
+                    confirm_text = st.text_input(
+                        "Type the Customer ID to confirm deletion",
+                        key=f"confirm_delete_{selected_id}"
+                    )
+                    confirm_checkbox = st.checkbox(
+                        "I understand this action is irreversible",
+                        key=f"confirm_delete_chk_{selected_id}"
+                    )
+                    delete_disabled = not (confirm_checkbox and confirm_text.strip().lower() == selected_id.strip().lower())
+                    if st.button("🗑️ Permanently Delete Customer", key=f"delete_customer_{selected_id}", type="secondary", disabled=delete_disabled):
+                        from admin_modules.github_admin import delete_customer
+                        with st.spinner("Deleting customer..."):
+                            if delete_customer(selected_id):
+                                st.success("Customer deleted successfully")
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete customer")
             else:
                 st.error("Failed to load customer details")
     
