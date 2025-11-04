@@ -18,8 +18,6 @@ from datetime import datetime
 
 def render_config_viewer():
     """Render configuration viewer interface"""
-    st.header("Configuration Viewer")
-    
     # Customer selector
     all_customer_ids = ["-- Select Customer --"] + list_all_customers()
     selected_customer = st.selectbox(
@@ -37,6 +35,24 @@ def render_config_viewer():
     if not customer_details:
         st.error("Failed to load customer details")
         return
+    
+    # Display header with customer logo (matching User App style)
+    branding = customer_details.get('branding', {})
+    logo_path = branding.get('logo_path', '')
+    app_name = branding.get('application_name', 'Newsletter')
+    company_name = customer_details.get('info', {}).get('company_name', selected_customer)
+    
+    if logo_path:
+        try:
+            col_logo, col_title = st.columns([1, 4])
+            with col_logo:
+                st.image(logo_path, width=150)
+            with col_title:
+                st.title(f"⚙️ Configuration Viewer - {app_name}")
+        except:
+            st.title(f"⚙️ Configuration Viewer - {app_name}")
+    else:
+        st.title(f"⚙️ Configuration Viewer - {app_name}")
     
     tab1, tab2, tab3, tab4 = st.tabs(["Keywords", "RSS Feeds", "Branding", "History"])
     

@@ -99,9 +99,6 @@ def render_login_page():
                     st.error(error_message)
             else:
                 st.error("Please enter both username and password.")
-    
-    # Legal disclaimer
-    st.caption("By accessing this admin dashboard, you confirm you have authorization to manage customer data and configurations.")
 
 def logout_admin():
     """Logout admin user"""
