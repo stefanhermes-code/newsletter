@@ -572,55 +572,55 @@ def render_customer_onboarding():
                     st.rerun()
                 else:
                     st.error("Failed to create customer account. Please check the error messages above and try again.")
+    
+    # Display success message and document outside the form (after form submission)
+    if st.session_state.get("onboarding_success", False):
+        st.markdown("---")
+        st.success(f"🎉 Customer account created successfully!")
         
-        # Display success message and document outside the form (after form submission)
-        if st.session_state.get("onboarding_success", False):
-            st.markdown("---")
-            st.success(f"🎉 Customer account created successfully!")
+        # Display summary
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info(f"**Customer ID:** {st.session_state.onboarding_customer_id}")
+            st.info(f"**Company:** {st.session_state.get('onboarding_company_name', 'N/A')}")
+            st.info(f"**Initial User:** {st.session_state.get('onboarding_contact_email', 'N/A')}")
+            st.info(f"**Subscription Tier:** {st.session_state.get('onboarding_subscription_tier', 'N/A')}")
+        
+        with col2:
+            st.success("✅ User can now log in to the User App and:")
+            st.write("- Change their password (Configuration → Change Password)")
+            st.write("- Add keywords (Configuration → Keywords)")
+            st.write("- Add RSS feeds (Configuration → RSS Feeds)")
+            st.write("- Configure branding (Configuration → Branding, if Premium tier)")
+        
+        st.markdown("---")
+        
+        # Display and download onboarding document (outside form)
+        st.subheader("📄 Customer Onboarding Document")
+        st.info("This document contains all the customer's account details. You can download it to send to the customer.")
+        
+        # Preview the document
+        st.markdown("### Document Preview")
+        if "onboarding_document_html" in st.session_state:
+            st.components.v1.html(st.session_state.onboarding_document_html, height=600, scrolling=True)
             
-            # Display summary
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info(f"**Customer ID:** {st.session_state.onboarding_customer_id}")
-                st.info(f"**Company:** {st.session_state.get('onboarding_company_name', 'N/A')}")
-                st.info(f"**Initial User:** {st.session_state.get('onboarding_contact_email', 'N/A')}")
-                st.info(f"**Subscription Tier:** {st.session_state.get('onboarding_subscription_tier', 'N/A')}")
-            
-            with col2:
-                st.success("✅ User can now log in to the User App and:")
-                st.write("- Change their password (Configuration → Change Password)")
-                st.write("- Add keywords (Configuration → Keywords)")
-                st.write("- Add RSS feeds (Configuration → RSS Feeds)")
-                st.write("- Configure branding (Configuration → Branding, if Premium tier)")
-            
-            st.markdown("---")
-            
-            # Display and download onboarding document (outside form)
-            st.subheader("📄 Customer Onboarding Document")
-            st.info("This document contains all the customer's account details. You can download it to send to the customer.")
-            
-            # Preview the document
-            st.markdown("### Document Preview")
-            if "onboarding_document_html" in st.session_state:
-                st.components.v1.html(st.session_state.onboarding_document_html, height=600, scrolling=True)
-                
-                # Download button (outside form)
-                st.download_button(
-                    label="📥 Download Customer Onboarding Document",
-                    data=st.session_state.onboarding_document_html,
-                    file_name=st.session_state.onboarding_document_filename,
-                    mime="text/html",
-                    key="download_onboarding_doc",
-                    type="primary"
-                )
-            
-            # Clear success flag after displaying
-            if st.button("Create Another Customer", key="create_another"):
-                st.session_state.onboarding_success = False
-                st.session_state.onboarding_document_html = None
-                st.session_state.onboarding_document_filename = None
-                st.session_state.onboarding_customer_id = None
-                st.rerun()
+            # Download button (outside form)
+            st.download_button(
+                label="📥 Download Customer Onboarding Document",
+                data=st.session_state.onboarding_document_html,
+                file_name=st.session_state.onboarding_document_filename,
+                mime="text/html",
+                key="download_onboarding_doc",
+                type="primary"
+            )
+        
+        # Clear success flag after displaying
+        if st.button("Create Another Customer", key="create_another"):
+            st.session_state.onboarding_success = False
+            st.session_state.onboarding_document_html = None
+            st.session_state.onboarding_document_filename = None
+            st.session_state.onboarding_customer_id = None
+            st.rerun()
 
 # Old onboarding step functions removed - using simplified single-form onboarding above
 
