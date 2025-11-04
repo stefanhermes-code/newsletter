@@ -278,9 +278,11 @@ def main():
                         del st.session_state[k]
                     except Exception:
                         pass
-            # Clear search/results and selections when switching company
+            # Clear search/results, selections and last preview when switching company
             st.session_state.found_articles = []
             st.session_state.selected_article_ids = set()
+            st.session_state.pop('last_newsletter_html', None)
+            st.session_state.pop('last_newsletter_filename', None)
             
             # Preserve page selection
             if 'user_app_current_page' not in st.session_state:
@@ -425,6 +427,13 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     st.header("📰 Generate Newsletter")
     can_generate = current_newsletter and 'generate' in current_newsletter.get('permissions', [])
     if can_generate:
+        # Show last preview if available
+        if st.session_state.get('last_newsletter_html'):
+            st.markdown("### Newsletter Preview")
+            st.components.v1.html(st.session_state['last_newsletter_html'], height=600, scrolling=True)
+            if st.session_state.get('last_newsletter_filename'):
+                newsletter_generator.download_newsletter(st.session_state['last_newsletter_html'], st.session_state['last_newsletter_filename'])
+
         selected_count = len(st.session_state.selected_article_ids)
         st.write(f"**{selected_count} articles selected**")
         if selected_count == 0:
@@ -451,9 +460,12 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                                 selected_articles,
                                 branding
                             )
+                            # Persist preview in session so it survives reruns
+                            st.session_state.last_newsletter_html = newsletter_html
+                            st.session_state.last_newsletter_filename = filename
                             st.markdown("### Newsletter Preview")
-                            st.components.v1.html(newsletter_html, height=600, scrolling=True)
-                            newsletter_generator.download_newsletter(newsletter_html, filename)
+                            st.components.v1.html(st.session_state.last_newsletter_html, height=600, scrolling=True)
+                            newsletter_generator.download_newsletter(st.session_state.last_newsletter_html, filename)
                             st.session_state.selected_article_ids = set()
                 else:
                     st.error("Failed to retrieve selected articles.")
