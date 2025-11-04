@@ -218,6 +218,16 @@ def main():
     
     # Update session state when page changes
     if page != st.session_state.user_app_current_page:
+        previous_page = st.session_state.user_app_current_page
+        
+        # Clear Dashboard-specific state when navigating away from Dashboard
+        if previous_page == "Dashboard":
+            st.session_state.pop('last_newsletter_html', None)
+            st.session_state.pop('last_newsletter_filename', None)
+            st.session_state.found_articles = []
+            st.session_state.selected_article_ids = set()
+            st.session_state.is_finding_news = False
+        
         st.session_state.user_app_current_page = page
     
     st.sidebar.markdown("---")
