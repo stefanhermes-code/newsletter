@@ -442,6 +442,64 @@ def list_customer_files(customer_id: str, folder_path: str = "") -> List[Dict]:
         logger.error(f"Error listing files for {customer_id}: {e}")
         return []
 
+def delete_customer(customer_id: str, commit_message: Optional[str] = None) -> bool:
+    """
+    Permanently delete a customer's entire folder from the repository.
+
+    WARNING: This is IRREVERSIBLE. Use only after explicit confirmation.
+
+    Args:
+        customer_id: Customer identifier
+        commit_message: Optional custom commit message
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        repo = get_repo()
+        if not repo:
+            return False
+
+        base_path = f"customers/{customer_id}"
+        if not commit_message:
+            commit_message = f"Admin: Delete customer {customer_id}"
+
+        # Collect all files recursively
+        try:
+            contents = repo.get_contents(base_path)
+        except GithubException as e:
+            if e.status == 404:
+                # Already gone
+                return True
+            raise
+
+        queue = contents if isinstance(contents, list) else [contents]
+        files: List[Dict[str, str]] = []
+
+        while queue:
+            item = queue.pop(0)
+            if item.type == 'dir':
+                queue.extend(repo.get_contents(item.path))
+            else:
+                files.append({"path": item.path, "sha": item.sha})
+
+        # Delete files (folders disappear when empty)
+        for f in files:
+            try:
+                repo.delete_file(f["path"], commit_message, f["sha"])
+            except GithubException as e:
+                if e.status == 404:
+                    continue
+                else:
+                    raise
+
+        logger.info(f"Customer deleted: {customer_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error deleting customer {customer_id}: {e}")
+        st.error(f"Failed to delete customer: {customer_id}")
+        return False
+
 def get_file_content(customer_id: str, file_path: str) -> Optional[str]:
     """
     Get file content from GitHub
