@@ -12,6 +12,7 @@ from admin_modules import analytics_engine
 from admin_modules import export_import
 from admin_modules import admin_auth
 from admin_modules.github_admin import list_all_customers
+from datetime import datetime
 
 # Page configuration
 st.set_page_config(
@@ -548,16 +549,54 @@ def render_customer_onboarding():
                 
                 if success:
                     st.success(f"🎉 Customer account created successfully!")
-                    st.info(f"**Customer ID:** {customer_id_clean}")
-                    st.info(f"**Company:** {company_name_clean}")
-                    st.info(f"**Initial User:** {contact_email_clean}")
-                    st.info(f"**Initial Password:** {initial_password}")
-                    st.info(f"**Subscription Tier:** {subscription_tier}")
-                    st.success("✅ User can now log in to the User App and:")
-                    st.write("- Change their password (Configuration → Change Password)")
-                    st.write("- Add keywords (Configuration → Keywords)")
-                    st.write("- Add RSS feeds (Configuration → RSS Feeds)")
-                    st.write("- Configure branding (Configuration → Branding, if Premium tier)")
+                    
+                    # Generate customer onboarding document
+                    onboarding_html = generate_customer_onboarding_document(
+                        customer_id=customer_id_clean,
+                        company_name=company_name_clean,
+                        contact_name=contact_name.strip() if contact_name else "",
+                        contact_email=contact_email_clean,
+                        initial_password=initial_password,
+                        subscription_tier=subscription_tier,
+                        short_name=short_name.strip() if short_name and short_name.strip() else customer_id_clean.upper()
+                    )
+                    
+                    # Display summary
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.info(f"**Customer ID:** {customer_id_clean}")
+                        st.info(f"**Company:** {company_name_clean}")
+                        st.info(f"**Initial User:** {contact_email_clean}")
+                        st.info(f"**Initial Password:** {initial_password}")
+                        st.info(f"**Subscription Tier:** {subscription_tier}")
+                    
+                    with col2:
+                        st.success("✅ User can now log in to the User App and:")
+                        st.write("- Change their password (Configuration → Change Password)")
+                        st.write("- Add keywords (Configuration → Keywords)")
+                        st.write("- Add RSS feeds (Configuration → RSS Feeds)")
+                        st.write("- Configure branding (Configuration → Branding, if Premium tier)")
+                    
+                    st.markdown("---")
+                    
+                    # Display and download onboarding document
+                    st.subheader("📄 Customer Onboarding Document")
+                    st.info("This document contains all the customer's account details. You can download it to send to the customer.")
+                    
+                    # Preview the document
+                    st.markdown("### Document Preview")
+                    st.components.v1.html(onboarding_html, height=600, scrolling=True)
+                    
+                    # Download button
+                    filename = f"Customer_Onboarding_{customer_id_clean}_{datetime.now().strftime('%Y%m%d')}.html"
+                    st.download_button(
+                        label="📥 Download Customer Onboarding Document",
+                        data=onboarding_html,
+                        file_name=filename,
+                        mime="text/html",
+                        key="download_onboarding_doc",
+                        type="primary"
+                    )
                     
                     st.balloons()
                     st.rerun()
@@ -565,6 +604,251 @@ def render_customer_onboarding():
                     st.error("Failed to create customer account. Please check the error messages above and try again.")
 
 # Old onboarding step functions removed - using simplified single-form onboarding above
+
+def generate_customer_onboarding_document(customer_id: str, company_name: str, contact_name: str,
+                                         contact_email: str, initial_password: str, 
+                                         subscription_tier: str, short_name: str) -> str:
+    """
+    Generate HTML document with customer onboarding details
+    
+    Args:
+        customer_id: Customer identifier
+        company_name: Company name
+        contact_name: Contact person name
+        contact_email: Contact email (login)
+        initial_password: Initial password
+        subscription_tier: Subscription tier (Premium/Standard/Basic)
+        short_name: Short name for company
+    
+    Returns:
+        HTML string with onboarding information
+    """
+    current_date = datetime.now().strftime("%B %d, %Y")
+    
+    # Tier permissions description
+    tier_descriptions = {
+        "Premium": "Full access to all features including configuration editing",
+        "Standard": "View newsletters and generate new ones",
+        "Basic": "View newsletters only"
+    }
+    
+    tier_description = tier_descriptions.get(subscription_tier, subscription_tier)
+    
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Onboarding - {company_name}</title>
+    <style>
+        @page {{ margin: 2cm; size: A4; }}
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .document-container {{
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            border-bottom: 3px solid #2c5aa0;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{
+            color: #2c5aa0;
+            margin: 0;
+            font-size: 28px;
+        }}
+        .header .date {{
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }}
+        .section {{
+            margin-bottom: 30px;
+        }}
+        .section-title {{
+            color: #2c5aa0;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }}
+        .info-row {{
+            display: flex;
+            margin-bottom: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }}
+        .info-label {{
+            font-weight: bold;
+            color: #555;
+            width: 200px;
+            flex-shrink: 0;
+        }}
+        .info-value {{
+            color: #333;
+            flex-grow: 1;
+        }}
+        .credentials-box {{
+            background-color: #f8f9fa;
+            border-left: 4px solid #2c5aa0;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .credentials-box .label {{
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 5px;
+        }}
+        .credentials-box .value {{
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: #333;
+            padding: 5px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }}
+        .instructions {{
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }}
+        .instructions h3 {{
+            color: #2c5aa0;
+            margin-top: 0;
+        }}
+        .instructions ul {{
+            margin: 10px 0;
+            padding-left: 25px;
+        }}
+        .instructions li {{
+            margin: 8px 0;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }}
+        .warning {{
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .warning strong {{
+            color: #856404;
+        }}
+    </style>
+</head>
+<body>
+    <div class="document-container">
+        <div class="header">
+            <h1>Welcome to GlobalNewsPilot Newsletter Tool</h1>
+            <div class="date">Account Created: {current_date}</div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Account Information</div>
+            <div class="info-row">
+                <div class="info-label">Company Name:</div>
+                <div class="info-value">{company_name}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Customer ID:</div>
+                <div class="info-value">{customer_id}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Short Name:</div>
+                <div class="info-value">{short_name}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Subscription Tier:</div>
+                <div class="info-value"><strong>{subscription_tier}</strong> - {tier_description}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Login Credentials</div>
+            <div class="credentials-box">
+                <div class="label">Email Address (Username):</div>
+                <div class="value">{contact_email}</div>
+            </div>
+            <div class="credentials-box">
+                <div class="label">Initial Password:</div>
+                <div class="value">{initial_password}</div>
+            </div>
+            <div class="warning">
+                <strong>⚠️ Important:</strong> Please change your password immediately after your first login for security purposes.
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Contact Information</div>
+            <div class="info-row">
+                <div class="info-label">Contact Name:</div>
+                <div class="info-value">{contact_name if contact_name else "Not provided"}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Contact Email:</div>
+                <div class="info-value">{contact_email}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Getting Started</div>
+            <div class="instructions">
+                <h3>Next Steps:</h3>
+                <ul>
+                    <li><strong>Log in</strong> to the User App using your email and initial password</li>
+                    <li><strong>Change your password</strong> (Configuration → Change Password tab)</li>
+                    <li><strong>Add keywords</strong> for news searching (Configuration → Keywords tab)</li>
+                    <li><strong>Add RSS feeds</strong> (optional, Configuration → RSS Feeds tab)</li>
+                    <li><strong>Configure branding</strong> (Configuration → Branding tab, if Premium tier)</li>
+                    <li><strong>Start generating newsletters</strong> from the Dashboard</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Account Features</div>
+            <div class="instructions">
+                <h3>What you can do with your account:</h3>
+                <ul>
+                    <li><strong>Find News:</strong> Search for articles based on your configured keywords</li>
+                    <li><strong>Generate Newsletters:</strong> Create professional HTML newsletters from selected articles</li>
+                    <li><strong>View Newsletters:</strong> Access all your generated newsletters</li>
+                    <li><strong>Manage Configuration:</strong> Update keywords, RSS feeds, and branding settings</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>GlobalNewsPilot Newsletter Tool</strong></p>
+            <p>For support or questions, please contact your administrator.</p>
+            <p>Document generated on {current_date}</p>
+        </div>
+    </div>
+</body>
+</html>"""
+    
+    return html_content
 
 def render_config_viewer():
     """Configuration Viewer page"""
