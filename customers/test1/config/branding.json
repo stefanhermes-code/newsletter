@@ -1,8 +1,0 @@
-{
-  "application_name": "Acme Newsletter",
-  "short_name": "TEST1",
-  "newsletter_title_template": "{name} - Week {week}",
-  "footer_text": "",
-  "footer_url": "",
-  "footer_url_display": ""
-}
