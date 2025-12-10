@@ -1,8 +1,10 @@
 {
-  "application_name": "Technobiz Newsletter",
-  "short_name": "Technobiz",
+  "application_name": "PU Review",
   "newsletter_title_template": "{name} - Week {week}",
   "footer_text": "",
   "footer_url": "",
-  "footer_url_display": ""
+  "footer_url_display": "",
+  "short_name": "Technobiz",
+  "last_updated": "peram.technobiz@gmail.com",
+  "updated_at": "2025-12-10T09:57:49.316557"
 }
