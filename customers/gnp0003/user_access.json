@@ -1,0 +1,21 @@
+{
+  "users": [
+    {
+      "email": "peram.technobiz@gmail.com",
+      "password": "changeme123",
+      "tier": "premium",
+      "role": "admin",
+      "permissions": [
+        "view",
+        "edit",
+        "generate",
+        "manage_config",
+        "edit_config"
+      ],
+      "status": "Active",
+      "valid_until": "",
+      "added_date": "2025-12-10",
+      "added_by": "admin"
+    }
+  ]
+}
