@@ -1,0 +1,8 @@
+{
+  "application_name": "Adhesives TechnoBiz Newsletter",
+  "short_name": "Adhesives",
+  "newsletter_title_template": "{name} - Week {week}",
+  "footer_text": "",
+  "footer_url": "",
+  "footer_url_display": ""
+}
