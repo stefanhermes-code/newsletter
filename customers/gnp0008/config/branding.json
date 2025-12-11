@@ -1,10 +1,10 @@
 {
   "application_name": "Adhesives Review",
-  "newsletter_title_template": "{name} - Week {week}",
+  "newsletter_title_template": "Adhesives Review - Week {week}",
   "footer_text": "",
   "footer_url": "",
   "footer_url_display": "",
   "short_name": "Adhesives",
   "last_updated": "peram.technobiz@gmail.com",
-  "updated_at": "2025-12-11T12:09:05.327490"
+  "updated_at": "2025-12-11T12:12:02.565440"
 }
