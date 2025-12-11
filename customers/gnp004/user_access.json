@@ -3,11 +3,14 @@
     {
       "email": "peram.technobiz@gmail.com",
       "password": "Peram2025",
-      "tier": "standard",
+      "tier": "premium",
       "role": "admin",
       "permissions": [
         "view",
-        "generate"
+        "edit",
+        "generate",
+        "manage_config",
+        "edit_config"
       ],
       "status": "Active",
       "valid_until": "",
