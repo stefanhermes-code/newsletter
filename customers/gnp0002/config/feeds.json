@@ -36,11 +36,6 @@
       "enabled": true
     },
     {
-      "name": "utech-polyurethane.com",
-      "url": "https://www.utech-polyurethane.com/rss",
-      "enabled": true
-    },
-    {
       "name": "pu-magazine.com",
       "url": "https://www.pu-magazine.com/rss",
       "enabled": true
@@ -151,6 +146,6 @@
       "enabled": true
     }
   ],
-  "last_updated": "migration",
-  "updated_at": "2025-01-16T00:00:00"
+  "last_updated": "stefan.hermes@htcglobal.asia",
+  "updated_at": ""
 }
