@@ -1,0 +1,8 @@
+{
+  "application_name": "Plastics TechnoBiz Newsletter",
+  "short_name": "Plastics",
+  "newsletter_title_template": "{name} - Week {week}",
+  "footer_text": "",
+  "footer_url": "",
+  "footer_url_display": ""
+}
