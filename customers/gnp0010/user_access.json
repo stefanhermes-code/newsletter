@@ -1,0 +1,21 @@
+{
+  "users": [
+    {
+      "email": "stefan.hermes@htcglobal.asia",
+      "password": "Stefan2025",
+      "tier": "premium",
+      "role": "admin",
+      "permissions": [
+        "view",
+        "edit",
+        "generate",
+        "manage_config",
+        "edit_config"
+      ],
+      "status": "Active",
+      "valid_until": "",
+      "added_date": "2026-01-28",
+      "added_by": "admin"
+    }
+  ]
+}
