@@ -17,6 +17,12 @@ from datetime import datetime
 def render_activity_monitoring():
     """Render activity monitoring interface"""
     st.header("Activity Monitoring")
+
+    # Apply pending selection before the selectbox is created.
+    # Streamlit forbids writing a widget key after that widget is instantiated.
+    pending = st.session_state.pop("activity_customer_pending", None)
+    if pending is not None:
+        st.session_state.activity_customer_selector = pending
     
     # Customer selector
     all_customer_ids = ["-- All Customers --"] + list_all_customers()
@@ -200,6 +206,6 @@ def render_all_customers_activity():
                 st.metric("Users", users_count)
             
             if st.button(f"View Details", key=f"view_activity_{customer_id}"):
-                st.session_state.activity_customer_selector = customer_id
+                st.session_state.activity_customer_pending = customer_id
                 st.rerun()
 
