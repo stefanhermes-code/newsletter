@@ -366,23 +366,69 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
     
     # News Finding Section
     st.header("📰 Find News")
-    
+
+    from user_modules.category_mapper import (
+        available_search_categories,
+        load_category_config,
+        merge_search_keywords,
+        keywords_for_categories,
+    )
+
+    all_keywords = [k for k in config_manager.load_keywords(customer_id) if k]
+    category_config = load_category_config(customer_id)
+    search_categories = available_search_categories(category_config, all_keywords)
+
     col1, col2 = st.columns([3, 1])
-    
     with col1:
         time_period = st.selectbox(
             "Time Period",
             ["Last 7 days", "Last 14 days", "Last 30 days"],
             key="time_period"
         )
-    
     with col2:
         st.write("")
         st.write("")
         find_button = st.button("🔍 Find News", type="primary")
 
-    # (diagnostics removed)
-    
+    if search_categories:
+        selected_categories = st.multiselect(
+            "Search by category",
+            options=search_categories,
+            default=[],
+            key="search_categories",
+            help="Select one or more categories to search all keywords mapped to them.",
+        )
+    else:
+        selected_categories = []
+        st.caption("No category mappings configured — use individual keywords below.")
+
+    category_keyword_set = set(
+        keywords_for_categories(selected_categories, all_keywords, category_config)
+    )
+    # Individual picks: all keywords, with those already covered by categories shown as selected info
+    keyword_options = all_keywords
+    selected_keywords = st.multiselect(
+        "Search by individual keyword",
+        options=keyword_options,
+        default=[],
+        key="search_keywords",
+        help="Add specific keywords on top of (or instead of) categories.",
+    )
+
+    search_keywords = merge_search_keywords(
+        selected_categories, selected_keywords, all_keywords, category_config
+    )
+    if selected_categories or selected_keywords:
+        covered_by_cat = len(category_keyword_set)
+        extra = len([k for k in selected_keywords if k not in category_keyword_set])
+        st.caption(
+            f"Will search **{len(search_keywords)}** keyword(s)"
+            + (f" ({covered_by_cat} from categories" + (f", {extra} extra" if extra else "") + ")" if selected_categories else "")
+            + "."
+        )
+    else:
+        st.info("Select at least one category and/or keyword to search.")
+
     # Find news functionality
     if find_button or st.session_state.is_finding_news:
         if not st.session_state.is_finding_news:
@@ -396,19 +442,18 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                     st.error("No company selected. Please select a company from the sidebar.")
                     st.session_state.is_finding_news = False
                     st.stop()
-                
-                # Get keywords and feeds
-                keywords = [k for k in config_manager.load_keywords(current_customer_id) if k]
+
+                if not search_keywords:
+                    st.warning("Select at least one category or keyword before searching.")
+                    st.session_state.is_finding_news = False
+                    st.stop()
+
                 feeds_config = config_manager.load_feeds(current_customer_id)
                 feed_urls = [f['url'] for f in feeds_config if f.get('enabled', True)]
                 # Temporarily disable RSS fetching (bogus URLs causing long loops)
                 feed_urls = []
-                
-                # Check if we have keywords or feeds
-                if not keywords and not feed_urls:
-                    st.warning("No keywords or RSS feeds configured. Please configure them in the Configuration section.")
-                    st.session_state.is_finding_news = False
-                    st.stop()
+
+                keywords = search_keywords
                 
                 # Find news in one pass (streaming and diagnostics removed)
                 articles = news_finder.find_news_background(
@@ -443,39 +488,80 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             st.components.v1.html(st.session_state['last_newsletter_html'], height=600, scrolling=True)
             if st.session_state.get('last_newsletter_filename'):
                 newsletter_generator.download_newsletter(st.session_state['last_newsletter_html'], st.session_state['last_newsletter_filename'])
+            newsletter_generator.download_linkedin_banner()
 
         selected_count = len(st.session_state.selected_article_ids)
         st.write(f"**{selected_count} articles selected**")
         if selected_count == 0:
             st.warning("Please select at least one article to generate a newsletter.")
         else:
+            from user_modules.category_mapper import draft_intro_from_articles, load_category_config, assign_sections
+            from user_modules import shortio_client
+
             short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
+            category_config = load_category_config(customer_id)
+            selected_articles_preview = article_dashboard.select_articles(
+                list(st.session_state.selected_article_ids),
+                st.session_state.found_articles
+            )
+            drafted = draft_intro_from_articles(
+                assign_sections(selected_articles_preview, category_config),
+                category_config
+            ) if selected_articles_preview else ""
+
+            # Keep user edits across reruns unless selection signature changes
+            selection_key = ",".join(sorted(st.session_state.selected_article_ids))
+            if st.session_state.get("_intro_selection_key") != selection_key:
+                st.session_state["_intro_selection_key"] = selection_key
+                st.session_state["newsletter_intro_input"] = drafted
+            if "newsletter_announcements_input" not in st.session_state:
+                st.session_state["newsletter_announcements_input"] = ""
+
+            st.markdown("#### Introduction & announcements")
+            intro_text = st.text_area(
+                "A. What's in this newsletter (3–4 sentences — editable)",
+                height=120,
+                key="newsletter_intro_input",
+            )
+            announcements = st.text_area(
+                "B. APBA announcements & upcoming events (manual)",
+                height=100,
+                key="newsletter_announcements_input",
+                placeholder="Events, member notices, deadlines…",
+            )
+
+            use_shortio = True
+            if shortio_client.is_configured():
+                use_shortio = st.checkbox(
+                    "Create Short.io tracked links (old links cleaned after ~60 days)",
+                    value=True,
+                    key="use_shortio_links",
+                )
+            else:
+                st.caption("Short.io not configured — article URLs will be used as-is.")
+
             generate_button = st.button("📰 Generate Newsletter", type="primary")
             if generate_button:
-                selected_articles = article_dashboard.select_articles(
-                    list(st.session_state.selected_article_ids),
-                    st.session_state.found_articles
-                )
+                selected_articles = selected_articles_preview
                 if selected_articles:
                     with st.spinner("Generating newsletter..."):
                         filename = newsletter_generator.generate_newsletter(
                             selected_articles=selected_articles,
                             branding=branding,
                             customer_id=customer_id,
-                            short_name=short_name
+                            short_name=short_name,
+                            intro_text=intro_text,
+                            announcements=announcements,
+                            use_shortio=use_shortio,
                         )
                         if filename:
                             st.success(f"Newsletter generated and saved: {filename}")
-                            newsletter_html = newsletter_generator.get_newsletter_preview(
-                                selected_articles,
-                                branding
-                            )
-                            # Persist preview in session so it survives reruns
-                            st.session_state.last_newsletter_html = newsletter_html
-                            st.session_state.last_newsletter_filename = filename
                             st.markdown("### Newsletter Preview")
                             st.components.v1.html(st.session_state.last_newsletter_html, height=600, scrolling=True)
-                            newsletter_generator.download_newsletter(st.session_state.last_newsletter_html, filename)
+                            newsletter_generator.download_newsletter(
+                                st.session_state.last_newsletter_html, filename
+                            )
+                            newsletter_generator.download_linkedin_banner()
                             st.session_state.selected_article_ids = set()
                 else:
                     st.error("Failed to retrieve selected articles.")
@@ -525,10 +611,136 @@ def render_newsletters_viewer(customer_id, current_newsletter, user_email):
             st.title(f"📰 Generated Newsletters - {app_name}")
     else:
         st.title(f"📰 Generated Newsletters - {app_name}")
+
+    can_generate = current_newsletter and 'generate' in current_newsletter.get('permissions', [])
+
+    # --- Upgrade old HTML to new format ---
+    st.header("🔄 Upgrade old newsletter HTML")
+    st.caption(
+        "Convert a legacy flat HTML newsletter into the new format "
+        "(categories, intro, announcements, banner, inline dates)."
+    )
+    upgrade_source = st.radio(
+        "Source",
+        ["Upload HTML file", "Pick saved newsletter"],
+        horizontal=True,
+        key="upgrade_source",
+    )
+
+    uploaded_html = None
+    selected_saved = None
+    newsletters = list_newsletters(customer_id)
+
+    if upgrade_source == "Upload HTML file":
+        uploaded = st.file_uploader(
+            "Upload newsletter .html",
+            type=["html", "htm"],
+            key="upgrade_upload",
+        )
+        if uploaded:
+            uploaded_html = uploaded.read().decode("utf-8", errors="replace")
+            selected_saved = uploaded.name
+    else:
+        names = [n["name"] for n in newsletters] if newsletters else []
+        if names:
+            selected_saved = st.selectbox("Saved newsletter", names, key="upgrade_pick")
+            if selected_saved:
+                uploaded_html = get_newsletter_content(customer_id, selected_saved)
+        else:
+            st.info("No saved newsletters found. Upload a file instead.")
+
+    if uploaded_html:
+        from user_modules.newsletter_upgrade import (
+            is_new_format,
+            parse_newsletter_html,
+            upgrade_html_content,
+        )
+        from user_modules.newsletter_generator import download_newsletter, download_linkedin_banner
+
+        arts_preview, meta_preview = parse_newsletter_html(uploaded_html)
+        st.write(
+            f"Detected **{len(arts_preview)}** article(s)"
+            + (f" — title: {meta_preview.get('title')}" if meta_preview.get("title") else "")
+            + (" · already new-format (can still re-apply)" if is_new_format(uploaded_html) else " · legacy format")
+        )
+
+        if can_generate:
+            upgrade_intro = st.text_area(
+                "A. Introduction (optional — auto-drafted if empty)",
+                height=100,
+                key="upgrade_intro",
+            )
+            upgrade_announcements = st.text_area(
+                "B. APBA announcements & upcoming events (optional)",
+                height=80,
+                key="upgrade_announcements",
+                placeholder="Events, member notices…",
+            )
+            from user_modules import shortio_client
+
+            upgrade_shortio = False
+            if shortio_client.is_configured():
+                upgrade_shortio = st.checkbox(
+                    "Also create Short.io tracked links",
+                    value=False,
+                    key="upgrade_shortio",
+                )
+            overwrite = st.checkbox(
+                "Overwrite original file when saving",
+                value=False,
+                key="upgrade_overwrite",
+                help="If unchecked, saves as …_upgraded.html",
+            )
+
+            if st.button("✨ Upgrade to new HTML", type="primary", key="upgrade_run"):
+                with st.spinner("Upgrading newsletter..."):
+                    keywords = [k for k in config_manager.load_keywords(customer_id) if k]
+                    new_html, articles, meta = upgrade_html_content(
+                        uploaded_html,
+                        customer_id=customer_id,
+                        branding=branding,
+                        all_keywords=keywords,
+                        intro_text=upgrade_intro,
+                        announcements=upgrade_announcements,
+                        use_shortio=upgrade_shortio,
+                    )
+                    if not new_html:
+                        st.error("Could not find articles in this HTML.")
+                    else:
+                        base_name = selected_saved or "Newsletter_upgraded.html"
+                        if not base_name.lower().endswith(".html"):
+                            base_name += ".html"
+                        if overwrite:
+                            out_name = base_name
+                        else:
+                            out_name = base_name.replace(".html", "_upgraded.html")
+                            if out_name == base_name:
+                                out_name = f"{base_name}_upgraded.html"
+
+                        from user_modules.github_user import save_newsletter
+
+                        if save_newsletter(
+                            customer_id,
+                            new_html,
+                            out_name,
+                            commit_message=f"Upgrade newsletter to new format: {out_name}",
+                        ):
+                            st.success(f"Upgraded and saved: {out_name} ({len(articles)} articles)")
+                            st.session_state["last_newsletter_html"] = new_html
+                            st.session_state["last_newsletter_filename"] = out_name
+                            st.components.v1.html(new_html, height=600, scrolling=True)
+                            download_newsletter(new_html, out_name)
+                            download_linkedin_banner()
+                        else:
+                            st.error("Upgrade built HTML but failed to save to GitHub.")
+                            st.session_state["last_newsletter_html"] = new_html
+                            download_newsletter(new_html, out_name)
+        else:
+            st.warning("You need generate permission to upgrade and save newsletters.")
+
+    st.markdown("---")
     
     # Load newsletters from GitHub
-    newsletters = list_newsletters(customer_id)
-    
     if not newsletters:
         st.info("No newsletters generated yet. Go to Dashboard to create your first newsletter.")
         return

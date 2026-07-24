@@ -31,3 +31,6 @@ html2text>=2020.1.16
 # Utilities
 python-dotenv>=1.0.0
 
+# Banner enrichment (LinkedIn cover overlay)
+Pillow>=10.0.0
+

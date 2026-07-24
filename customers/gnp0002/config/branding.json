@@ -3,11 +3,12 @@
   "short_name": "APBA",
   "newsletter_title_template": "{name} - Week {week}",
   "logo_path": "customers/gnp0002/assets/APBA logo.jpg",
+  "banner_path": "customers/gnp0002/assets/APBA Banner Newsletter.png",
   "footer_text": "",
   "footer_url": "",
   "footer_url_display": "",
-  "last_updated": "migration",
-  "updated_at": "2025-01-16T00:00:00"
+  "last_updated": "system",
+  "updated_at": "2026-07-24T00:00:00"
 }
 
 
