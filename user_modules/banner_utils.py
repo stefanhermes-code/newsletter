@@ -55,7 +55,6 @@ def banner_data_uri(banner_path: str) -> str:
     """Return data URI for newsletter HTML, or empty string."""
     data = load_banner_bytes(banner_path)
     if not data:
-        # Fallback public raw URL
         try:
             repo_name = st.secrets.get("github_repo", "") if hasattr(st, "secrets") else ""
             if repo_name and banner_path:
@@ -68,6 +67,28 @@ def banner_data_uri(banner_path: str) -> str:
     return f"data:{mime};base64,{b64}"
 
 
+def _avg_brightness(img, box) -> float:
+    crop = img.crop(box).convert("L")
+    pixels = list(crop.getdata())
+    return (sum(pixels) / len(pixels)) if pixels else 0.0
+
+
+def _load_font(size: int):
+    from PIL import ImageFont
+
+    for name in (
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ):
+        try:
+            return ImageFont.truetype(name, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
 def enrich_banner(
     banner_path: str,
     *,
@@ -76,16 +97,18 @@ def enrich_banner(
     theme: str = "",
 ) -> Optional[Tuple[bytes, str]]:
     """
-    Overlay week + optional theme on the banner for LinkedIn upload.
+    Overlay a clear week line (+ optional theme) without covering APBA branding.
 
-    Returns (png_bytes, filename) or None.
+    Supports:
+    - Wide layout with white APBA panel on the left (preferred LinkedIn cover)
+    - Full-bleed dark banners with logo bottom-right
     """
     raw = load_banner_bytes(banner_path)
     if not raw:
         return None
 
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image, ImageDraw
     except ImportError:
         logger.error("Pillow not installed; cannot enrich banner")
         return None
@@ -100,68 +123,67 @@ def enrich_banner(
         draw = ImageDraw.Draw(img)
         w, h = img.size
 
-        # Prefer a clean sans font; fall back to default
-        font_large = None
-        font_small = None
-        for name in (
-            "C:/Windows/Fonts/arialbd.ttf",
-            "C:/Windows/Fonts/segoeuib.ttf",
-            "C:/Windows/Fonts/arial.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        ):
-            try:
-                font_large = ImageFont.truetype(name, max(28, w // 40))
-                font_small = ImageFont.truetype(name, max(20, w // 55))
-                break
-            except Exception:
-                continue
-        if font_large is None:
-            font_large = ImageFont.load_default()
-            font_small = font_large
+        aspect = w / float(h)
 
-        line1 = f"WEEK {week_number:02d} · {year}"
-        line2 = theme.strip() if theme else ""
+        # Find where the dark content panel begins (skip white APBA brand panel if present)
+        gray = img.convert("L")
+        dark_start = 0
+        for x in range(0, w, 5):
+            col = [gray.getpixel((x, y)) for y in range(0, h, 8)]
+            if (sum(col) / len(col)) < 45:
+                # Confirm a stretch of dark columns (not just a black letter)
+                confirm = []
+                for xx in range(x, min(w, x + 80), 5):
+                    c2 = [gray.getpixel((xx, y)) for y in range(0, h, 8)]
+                    confirm.append(sum(c2) / len(c2))
+                if confirm and (sum(confirm) / len(confirm)) < 55:
+                    dark_start = x
+                    break
+        brand_left = dark_start > int(w * 0.25) or aspect > 2.5
+        if dark_start < int(w * 0.25):
+            dark_start = int(w * 0.45) if brand_left else int(w * 0.08)
 
-        # Lower-left open area of the APBA banner
-        margin_x = int(w * 0.04)
-        margin_y = int(h * 0.72)
-        padding = 14
+        font_week = _load_font(max(22, h // 12))
+        font_theme = _load_font(max(16, h // 18))
 
-        # Measure text block
-        bbox1 = draw.textbbox((0, 0), line1, font=font_large)
-        tw1, th1 = bbox1[2] - bbox1[0], bbox1[3] - bbox1[1]
-        tw2 = th2 = 0
+        line1 = f"WEEK {week_number:02d}  ·  {year}"
+        line2 = (theme or "").strip()
+
+        # Anchor text in the dark content area only (never over the white APBA panel)
+        if brand_left:
+            text_left = dark_start + max(16, w // 80)
+            cy = int(h * 0.68)
+            max_text_w = w - text_left - max(20, w // 40)
+            center_mode = False
+            cx = text_left
+        else:
+            text_left = int(w * 0.08)
+            cy = int(h * 0.62)
+            max_text_w = int(w * 0.55)
+            center_mode = True
+            cx = int(w * 0.42)
+
+        def _draw_line(text, font, y, fill):
+            bbox = draw.textbbox((0, 0), text, font=font)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            display = text
+            if tw > max_text_w and len(text) > 28:
+                display = text[:28].rstrip() + "…"
+                bbox = draw.textbbox((0, 0), display, font=font)
+                tw = bbox[2] - bbox[0]
+                th = bbox[3] - bbox[1]
+            if center_mode:
+                x = cx - tw // 2
+            else:
+                x = text_left
+            draw.text((x + 2, y + 2), display, fill=(0, 0, 0, 180), font=font)
+            draw.text((x, y), display, fill=fill, font=font)
+            return th
+
+        th1 = _draw_line(line1, font_week, cy, (255, 176, 64, 255))  # amber pulse color
         if line2:
-            bbox2 = draw.textbbox((0, 0), line2, font=font_small)
-            tw2, th2 = bbox2[2] - bbox2[0], bbox2[3] - bbox2[1]
-
-        box_w = max(tw1, tw2) + padding * 2
-        box_h = th1 + (th2 + 8 if line2 else 0) + padding * 2
-
-        # Semi-transparent dark plate for readability
-        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        odraw = ImageDraw.Draw(overlay)
-        odraw.rounded_rectangle(
-            [margin_x, margin_y, margin_x + box_w, margin_y + box_h],
-            radius=8,
-            fill=(10, 25, 50, 170),
-        )
-        img = Image.alpha_composite(img, overlay)
-        draw = ImageDraw.Draw(img)
-
-        draw.text(
-            (margin_x + padding, margin_y + padding),
-            line1,
-            fill=(255, 255, 255, 255),
-            font=font_large,
-        )
-        if line2:
-            draw.text(
-                (margin_x + padding, margin_y + padding + th1 + 8),
-                line2,
-                fill=(255, 200, 120, 255),
-                font=font_small,
-            )
+            _draw_line(line2, font_theme, cy + th1 + max(6, h // 40), (255, 255, 255, 255))
 
         out = io.BytesIO()
         img.convert("RGB").save(out, format="PNG", optimize=True)

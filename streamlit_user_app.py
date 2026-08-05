@@ -171,6 +171,7 @@ def main():
         st.session_state.user_newsletters = []
         st.session_state.selected_article_ids = set()
         st.session_state.found_articles = []
+        st.session_state.article_bank = {}
         st.rerun()
     
     st.sidebar.markdown("---")
@@ -226,6 +227,7 @@ def main():
             st.session_state.pop('last_newsletter_filename', None)
             st.session_state.found_articles = []
             st.session_state.selected_article_ids = set()
+            st.session_state.article_bank = {}
             st.session_state.is_finding_news = False
         
         st.session_state.user_app_current_page = page
@@ -291,6 +293,7 @@ def main():
             # Clear search/results, selections and last preview when switching company
             st.session_state.found_articles = []
             st.session_state.selected_article_ids = set()
+            st.session_state.article_bank = {}
             st.session_state.pop('last_newsletter_html', None)
             st.session_state.pop('last_newsletter_filename', None)
             
@@ -462,19 +465,33 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                     time_period=time_period,
                     progress_callback=None
                 )
-                
-                st.session_state.found_articles = articles
+
+                # Merge with previous results so selections from earlier category
+                # searches are not wiped when you search another category.
+                previous = st.session_state.get("found_articles") or []
+                if articles:
+                    if previous:
+                        st.session_state.found_articles = article_dashboard.merge_found_articles(
+                            previous, articles
+                        )
+                        st.success(
+                            f"✅ Found {len(articles)} new articles "
+                            f"({len(st.session_state.found_articles)} total after merge)"
+                        )
+                    else:
+                        st.session_state.found_articles = articles
+                        article_dashboard.merge_into_article_bank(articles)
+                        st.success(f"✅ Found {len(articles)} articles")
+                else:
+                    st.info(
+                        "No articles found for this search. "
+                        "Previous results and selections are unchanged."
+                    )
             except Exception as e:
                 st.error(f"Error finding news: {str(e)}")
             finally:
                 # Always finalize to avoid stuck spinner
                 st.session_state.is_finding_news = False
-                
-                
-                if articles:
-                    st.success(f"✅ Found {len(articles)} articles")
-                else:
-                    st.info("No articles found. Try adjusting your keywords or time period.")
     
     st.markdown("---")
     
@@ -500,7 +517,7 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
 
             short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
             category_config = load_category_config(customer_id)
-            selected_articles_preview = article_dashboard.select_articles(
+            selected_articles_preview = article_dashboard.lookup_articles(
                 list(st.session_state.selected_article_ids),
                 st.session_state.found_articles
             )

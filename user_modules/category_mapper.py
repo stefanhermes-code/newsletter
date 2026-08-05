@@ -68,15 +68,158 @@ def resolve_section(keyword_or_category: str, mappings: Dict[str, str], categori
     return "Other"
 
 
+# Theme cues used when the exact keyword is not present in the title
+_SECTION_CUES = [
+    (
+        "Supply Chain Disruptions",
+        (
+            "tariff", "tariffs", "anti-dumping", "antidumping", "hormuz",
+            "supply chain", "freight", "shipping", "sanction", "blockade",
+            "port", "logistics", "raw material volatility", "trade war",
+            "export ban", "import duty", "duties",
+        ),
+    ),
+    (
+        "Sustainability & Recycling",
+        (
+            "recycl", "circular", "bio-based", "biobased", "biopolyol", "repolyol",
+            "sustainab", "carbon", "net-zero", "net zero", "life cycle", "lca",
+            "low-voc", "low emission", "waste", "rebond", "glycolysis",
+            "hydrolysis", "aminolysis",
+        ),
+    ),
+    (
+        "Regulations & Safety",
+        (
+            "reach", "regulation", "compliance", "restriction", "worker safety",
+            "health and safety", "flame retard", "fire retard", "isocyanate restriction",
+        ),
+    ),
+    (
+        "Markets & Industry",
+        (
+            "acquisition", "merger", "divest", "joint venture", "capacity",
+            "investment", "pricing", "market growth", "demand", "plant restart",
+            "debottleneck", "ipo", "takeover", "earnings", "stock",
+        ),
+    ),
+    (
+        "Applications",
+        (
+            "automotive", "mattress", "furniture", "insulation", "footwear",
+            "construction", "3d print", "bedding", "seating", "spray foam",
+            "cold chain", "appliance", "nvh",
+        ),
+    ),
+    (
+        "Materials & Chemistry",
+        (
+            "polyol", "isocyanate", "catalyst", "elastomer", "foam", "coating",
+            "adhesive", "sealant", "prepolymer", "surfactant", "blowing agent",
+            "tpu", "case ", "rim ", "polyurethane", "pu ",
+        ),
+    ),
+]
+
+
+def _normalize_match_text(text: str) -> str:
+    return " ".join((text or "").lower().replace("-", " ").split())
+
+
+def match_keyword_in_text(text: str, keywords: List[str]) -> str:
+    """
+    Return best keyword match for text (title), or ''.
+
+    Tries longest exact phrase first, then looser token/stem matches
+    (e.g. 'Tariffs' ↔ 'tariff', 'Strait of Hormuz' ↔ 'Hormuz').
+    """
+    hay = _normalize_match_text(text)
+    if not hay or not keywords:
+        return ""
+
+    keywords_sorted = sorted([k for k in keywords if k], key=len, reverse=True)
+
+    # 1) Exact phrase
+    for kw in keywords_sorted:
+        if _normalize_match_text(kw) in hay:
+            return kw
+
+    # 2) Significant tokens (ignore short glue words)
+    stop = {"of", "the", "and", "in", "for", "a", "an", "to", "on", "or"}
+    for kw in keywords_sorted:
+        tokens = [t for t in _normalize_match_text(kw).split() if t not in stop and len(t) >= 4]
+        if not tokens:
+            continue
+        # All significant tokens present, or the distinctive last token for multi-word kws
+        if all(t in hay for t in tokens):
+            return kw
+        if len(tokens) >= 2 and tokens[-1] in hay and len(tokens[-1]) >= 5:
+            return kw
+
+    # 3) Simple plural/stem: keyword without trailing s
+    for kw in keywords_sorted:
+        stem = _normalize_match_text(kw).rstrip("s")
+        if len(stem) >= 5 and stem in hay:
+            return kw
+
+    return ""
+
+
+def section_from_cues(text: str, categories: List[str]) -> str:
+    """Fallback section from thematic cues in title/snippet."""
+    hay = _normalize_match_text(text)
+    if not hay:
+        return "Other"
+    allowed = set(categories or DEFAULT_CATEGORIES)
+    for section, cues in _SECTION_CUES:
+        if section not in allowed and section != "Other":
+            continue
+        if any(c in hay for c in cues):
+            return section
+    return "Other"
+
+
+def classify_article_section(
+    article: Dict,
+    all_keywords: List[str],
+    category_config: Dict,
+) -> str:
+    """
+    Best-effort section for an article using:
+    1) stored matched keyword / category field
+    2) keyword match against title (+ snippet)
+    3) thematic cues
+    """
+    mappings = category_config.get("keyword_mappings") or {}
+    categories = category_config.get("categories") or DEFAULT_CATEGORIES
+
+    raw = (article.get("category") or article.get("matched_keyword") or "").strip()
+    if raw:
+        section = resolve_section(raw, mappings, categories)
+        if section != "Other":
+            return section
+
+    if article.get("newsletter_section") in categories:
+        return article["newsletter_section"]
+
+    blob = f"{article.get('title') or ''} {article.get('snippet') or ''}"
+    kw = match_keyword_in_text(blob, all_keywords or list(mappings.keys()))
+    if kw:
+        return resolve_section(kw, mappings, categories)
+
+    return section_from_cues(blob, categories)
+
+
 def assign_sections(articles: List[Dict], category_config: Dict) -> List[Dict]:
     """Return article copies with newsletter_section set."""
     mappings = category_config.get("keyword_mappings") or {}
-    categories = category_config.get("categories") or DEFAULT_CATEGORIES
+    all_keywords = list(mappings.keys())
     result = []
     for article in articles:
         item = dict(article)
-        raw = item.get("category") or item.get("matched_keyword") or ""
-        item["newsletter_section"] = resolve_section(raw, mappings, categories)
+        item["newsletter_section"] = classify_article_section(
+            item, all_keywords, category_config
+        )
         result.append(item)
     return result
 
@@ -110,7 +253,9 @@ def group_by_section(
 
 def draft_intro_from_articles(articles: List[Dict], category_config: Optional[Dict] = None) -> str:
     """
-    Draft a short 3–4 sentence intro from selected articles (editable by user).
+    Draft a short editorial intro (3–4 sentences).
+
+    Summarises themes in context — no article counts, no title lists.
     """
     if not articles:
         return ""
@@ -118,42 +263,80 @@ def draft_intro_from_articles(articles: List[Dict], category_config: Optional[Di
     config = category_config or {"categories": DEFAULT_CATEGORIES}
     assigned = assign_sections(articles, config)
     grouped = group_by_section(assigned, config)
+    sections = list(grouped.keys())
 
-    count = len(assigned)
-    section_names = list(grouped.keys())
-    if len(section_names) == 1:
-        sections_phrase = section_names[0]
-    elif len(section_names) == 2:
-        sections_phrase = f"{section_names[0]} and {section_names[1]}"
-    else:
-        sections_phrase = ", ".join(section_names[:-1]) + f", and {section_names[-1]}"
-
-    highlights = []
-    for art in assigned[:3]:
-        title = (art.get("title") or "").strip()
-        if title:
-            # Keep titles readable in a sentence
-            if len(title) > 90:
-                title = title[:87] + "…"
-            highlights.append(title)
-
-    sentences = [
-        f"This week's newsletter brings together {count} selected stories across {sections_phrase}.",
+    # Theme cues from titles (not quoted back as a list)
+    blob = " ".join((a.get("title") or "") for a in assigned).lower()
+    cues = []
+    cue_map = [
+        (("tariff", "anti-dumping", "hormuz", "supply chain", "freight", "shipping", "sanctions"),
+         "trade friction and supply-chain pressure"),
+        (("recycl", "circular", "bio-based", "biopolyol", "repolyol", "sustainab", "carbon", "net-zero"),
+         "circularity and lower-carbon materials"),
+        (("reach", "regulation", "compliance", "isocyanate restriction", "safety", "flame retard"),
+         "regulatory and safety developments"),
+        (("price", "capacity", "investment", "merger", "acquisition", "market", "demand"),
+         "market and investment signals"),
+        (("automotive", "mattress", "furniture", "insulation", "footwear", "construction", "3d print"),
+         "downstream application trends"),
+        (("polyol", "isocyanate", "catalyst", "elastomer", "foam", "coating", "adhesive"),
+         "materials and chemistry advances"),
     ]
-    if highlights:
-        if len(highlights) == 1:
-            sentences.append(f"Among the highlights is: {highlights[0]}.")
-        else:
-            joined = "; ".join(highlights)
-            sentences.append(f"Key items include: {joined}.")
-    sentences.append(
-        "Browse the sections below for the full set of links and publication dates."
-    )
-    if "Supply Chain Disruptions" in section_names:
-        sentences.append(
-            "Pay particular attention to Supply Chain Disruptions for developments that may affect availability and pricing."
+    for keys, label in cue_map:
+        if any(k in blob for k in keys):
+            cues.append(label)
+    cues = cues[:3]
+
+    focus_sections = [s for s in sections if s != "Other"]
+    if not focus_sections:
+        focus_sections = sections
+
+    if len(focus_sections) == 1:
+        openers = (
+            f"This week's Global Pulse centres on {focus_sections[0].lower()}, "
+            f"and what those developments mean for polyurethane businesses across Asia."
         )
-    return " ".join(sentences[:4])
+    elif len(focus_sections) == 2:
+        openers = (
+            f"This week's Global Pulse connects {focus_sections[0].lower()} with "
+            f"{focus_sections[1].lower()}, tracing how both are shaping decisions in the value chain."
+        )
+    else:
+        openers = (
+            "This week's Global Pulse steps across the polyurethane landscape — "
+            "from upstream chemistry and trade conditions to how converters and end-markets are responding."
+        )
+
+    if cues:
+        if len(cues) == 1:
+            mid = f"The through-line is {cues[0]}."
+        elif len(cues) == 2:
+            mid = f"Watch especially for {cues[0]}, alongside {cues[1]}."
+        else:
+            mid = f"Watch especially for {cues[0]}, {cues[1]}, and {cues[2]}."
+    else:
+        mid = (
+            "Rather than a round-up of headlines, the aim is to frame the week so "
+            "members can see where risk and opportunity are concentrating."
+        )
+
+    if "Supply Chain Disruptions" in sections:
+        close = (
+            "Supply-chain items are grouped so you can judge exposure quickly; "
+            "the remaining sections organise the rest by theme."
+        )
+    elif "Regulations & Safety" in sections:
+        close = (
+            "Compliance-sensitive items are kept together so operational and "
+            "commercial teams can scan what may affect market access."
+        )
+    else:
+        close = (
+            "Use the sections below to move straight to the themes most relevant "
+            "to your products, customers, and geography."
+        )
+
+    return " ".join([openers, mid, close])
 
 
 def suggest_banner_theme(articles: List[Dict], category_config: Optional[Dict] = None) -> str:

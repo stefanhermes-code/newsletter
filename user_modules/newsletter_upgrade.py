@@ -114,46 +114,23 @@ def infer_keyword_categories(
     category_config: Dict,
 ) -> List[Dict]:
     """
-    Assign newsletter sections by matching article titles to configured keywords.
-    Longest keyword match wins. Falls back to existing section or Other.
+    Assign newsletter sections for upgraded / title-only articles.
+    Uses shared classifier (keyword + stem + thematic cues).
     """
-    mappings = category_config.get("keyword_mappings") or {}
-    categories = category_config.get("categories") or []
-    keywords_sorted = sorted([k for k in all_keywords if k], key=len, reverse=True)
+    from user_modules.category_mapper import classify_article_section
 
+    mappings = category_config.get("keyword_mappings") or {}
+    keywords = all_keywords or list(mappings.keys())
     result = []
     for article in articles:
         item = dict(article)
-        # Keep explicit section from new-format HTML if present
-        if item.get("newsletter_section") and item["newsletter_section"] in (
-            categories or [item["newsletter_section"]]
-        ):
-            if not item.get("category"):
-                item["category"] = item["newsletter_section"]
-            result.append(item)
-            continue
-
-        title_l = (item.get("title") or "").lower()
-        matched_kw = ""
-        for kw in keywords_sorted:
-            if kw.lower() in title_l:
-                matched_kw = kw
-                break
-
-        if matched_kw:
-            item["category"] = matched_kw
-            item["newsletter_section"] = resolve_section(
-                matched_kw, mappings, categories
-            )
-        else:
-            item["category"] = item.get("category") or "Other"
-            item["newsletter_section"] = resolve_section(
-                item["category"], mappings, categories
-            )
+        section = classify_article_section(item, keywords, category_config)
+        item["newsletter_section"] = section
+        if not item.get("category"):
+            item["category"] = section
         result.append(item)
+    return result
 
-    # Normalize via assign_sections for consistency
-    return assign_sections(result, category_config)
 
 
 def upgrade_html_content(
