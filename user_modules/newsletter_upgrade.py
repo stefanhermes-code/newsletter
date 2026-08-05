@@ -167,7 +167,11 @@ def upgrade_html_content(
     articles = infer_keyword_categories(articles, keywords, category_config)
 
     if not intro_text.strip():
-        intro_text = draft_intro_from_articles(articles, category_config)
+        intro_text = draft_intro_from_articles(
+            articles,
+            category_config,
+            newsletter_name=branding.get("application_name", "") or branding.get("short_name", ""),
+        )
 
     if use_shortio:
         try:

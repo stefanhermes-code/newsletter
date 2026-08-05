@@ -143,7 +143,11 @@ def generate_newsletter(
     banner_url = banner_data_uri(banner_path) if banner_path else ""
 
     if not intro_text.strip():
-        intro_text = draft_intro_from_articles(articles, category_config)
+        intro_text = draft_intro_from_articles(
+            articles,
+            category_config,
+            newsletter_name=application_name,
+        )
 
     html_content = format_html_newsletter(
         articles,
@@ -471,7 +475,11 @@ def get_newsletter_preview(
         else selected_articles
     )
     if not intro_text.strip() and category_config:
-        intro_text = draft_intro_from_articles(articles, category_config)
+        intro_text = draft_intro_from_articles(
+            articles,
+            category_config,
+            newsletter_name=application_name,
+        )
 
     return format_html_newsletter(
         articles,

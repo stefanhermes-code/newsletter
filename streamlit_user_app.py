@@ -548,7 +548,8 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
             )
             drafted = draft_intro_from_articles(
                 assign_sections(selected_articles_preview, category_config),
-                category_config
+                category_config,
+                newsletter_name=branding.get("application_name", "") or app_name,
             ) if selected_articles_preview else ""
 
             # Keep user edits across reruns unless selection signature changes

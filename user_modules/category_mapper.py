@@ -251,14 +251,26 @@ def group_by_section(
     return OrderedDict((k, v) for k, v in grouped.items() if v)
 
 
-def draft_intro_from_articles(articles: List[Dict], category_config: Optional[Dict] = None) -> str:
+def draft_intro_from_articles(
+    articles: List[Dict],
+    category_config: Optional[Dict] = None,
+    newsletter_name: str = "",
+) -> str:
     """
     Draft a short editorial intro (3–4 sentences).
 
     Summarises themes in context — no article counts, no title lists.
+    Uses the customer newsletter name (e.g. APBA NewsBulletin), not banner taglines.
     """
     if not articles:
         return ""
+
+    name = (newsletter_name or "").strip() or "This week's newsletter"
+    # "This week's APBA NewsBulletin …" vs already including "newsletter"
+    if name.lower().startswith("this week's"):
+        week_label = name
+    else:
+        week_label = f"This week's {name}"
 
     config = category_config or {"categories": DEFAULT_CATEGORIES}
     assigned = assign_sections(articles, config)
@@ -293,17 +305,17 @@ def draft_intro_from_articles(articles: List[Dict], category_config: Optional[Di
 
     if len(focus_sections) == 1:
         openers = (
-            f"This week's Global Pulse centres on {focus_sections[0].lower()}, "
+            f"{week_label} centres on {focus_sections[0].lower()}, "
             f"and what those developments mean for polyurethane businesses across Asia."
         )
     elif len(focus_sections) == 2:
         openers = (
-            f"This week's Global Pulse connects {focus_sections[0].lower()} with "
+            f"{week_label} connects {focus_sections[0].lower()} with "
             f"{focus_sections[1].lower()}, tracing how both are shaping decisions in the value chain."
         )
     else:
         openers = (
-            "This week's Global Pulse steps across the polyurethane landscape — "
+            f"{week_label} steps across the polyurethane landscape — "
             "from upstream chemistry and trade conditions to how converters and end-markets are responding."
         )
 
