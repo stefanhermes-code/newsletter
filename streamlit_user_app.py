@@ -470,17 +470,40 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 # searches are not wiped when you search another category.
                 previous = st.session_state.get("found_articles") or []
                 if articles:
-                    if previous:
-                        st.session_state.found_articles = article_dashboard.merge_found_articles(
-                            previous, articles
+                    merge_found = getattr(article_dashboard, "merge_found_articles", None)
+                    merge_bank = getattr(article_dashboard, "merge_into_article_bank", None)
+                    if previous and callable(merge_found):
+                        st.session_state.found_articles = merge_found(previous, articles)
+                        st.success(
+                            f"✅ Found {len(articles)} new articles "
+                            f"({len(st.session_state.found_articles)} total after merge)"
                         )
+                    elif previous:
+                        # Fallback if Cloud is mid-redeploy with a stale article_dashboard
+                        by_id = {
+                            a.get("article_id"): a
+                            for a in (previous + articles)
+                            if a.get("article_id")
+                        }
+                        st.session_state.found_articles = list(by_id.values())
+                        if "article_bank" not in st.session_state:
+                            st.session_state.article_bank = {}
+                        st.session_state.article_bank.update(by_id)
                         st.success(
                             f"✅ Found {len(articles)} new articles "
                             f"({len(st.session_state.found_articles)} total after merge)"
                         )
                     else:
                         st.session_state.found_articles = articles
-                        article_dashboard.merge_into_article_bank(articles)
+                        if callable(merge_bank):
+                            merge_bank(articles)
+                        else:
+                            if "article_bank" not in st.session_state:
+                                st.session_state.article_bank = {}
+                            for a in articles:
+                                aid = a.get("article_id")
+                                if aid:
+                                    st.session_state.article_bank[aid] = a
                         st.success(f"✅ Found {len(articles)} articles")
                 else:
                     st.info(
@@ -517,7 +540,9 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
 
             short_name = customer_config.get('branding', {}).get('short_name') or customer_id.upper()
             category_config = load_category_config(customer_id)
-            selected_articles_preview = article_dashboard.lookup_articles(
+            selected_articles_preview = getattr(
+                article_dashboard, "lookup_articles", article_dashboard.select_articles
+            )(
                 list(st.session_state.selected_article_ids),
                 st.session_state.found_articles
             )
