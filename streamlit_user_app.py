@@ -807,8 +807,8 @@ def render_newsletters_viewer(customer_id, current_newsletter, user_email):
             
             with col1:
                 st.markdown(f"### {newsletter['name']}")
-                st.caption(f"Last modified: {newsletter.get('last_modified', 'Unknown')}")
-                st.caption(f"Size: {newsletter.get('size', 0)} bytes")
+                issue = newsletter.get("issue_label") or newsletter.get("name")
+                st.caption(f"Issue: {issue} · Size: {newsletter.get('size', 0)} bytes")
             
             with col2:
                 # View button

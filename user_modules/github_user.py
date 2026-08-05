@@ -333,6 +333,9 @@ def list_newsletters(customer_id: str) -> List[Dict]:
         List of newsletter metadata dictionaries
         [{"name": "...", "path": "...", "last_modified": "..."}, ...]
     """
+    import re
+    from datetime import datetime
+
     try:
         repo = get_repo()
         if not repo:
@@ -347,16 +350,37 @@ def list_newsletters(customer_id: str) -> List[Dict]:
             if isinstance(contents, list):
                 for file in contents:
                     if file.type == "file" and file.name.endswith('.html'):
+                        # Prefer week/year from filename — GitHub Contents list
+                        # last_modified is often the same HTTP header for every file
+                        # in the directory (looks like "all updated today").
+                        week = None
+                        year = None
+                        m = re.search(r"[Ww]eek[_\s-]?(\d{1,2}).*?(\d{4})", file.name)
+                        if m:
+                            week = int(m.group(1))
+                            year = int(m.group(2))
+                        issue_label = (
+                            f"Week {week:02d}, {year}" if week and year else file.name
+                        )
                         newsletters.append({
                             "name": file.name,
                             "path": file.path,
+                            "week": week,
+                            "year": year,
+                            "issue_label": issue_label,
+                            # Keep API field but do not treat it as issue date
                             "last_modified": file.last_modified,
                             "size": file.size,
                             "download_url": file.download_url
                         })
             
-            # Sort by last_modified (newest first)
-            newsletters.sort(key=lambda x: x.get("last_modified", ""), reverse=True)
+            # Sort by issue year/week (newest first); fall back to name
+            def sort_key(item):
+                y = item.get("year") or 0
+                w = item.get("week") or 0
+                return (y, w, item.get("name", ""))
+
+            newsletters.sort(key=sort_key, reverse=True)
             return newsletters
         
         except GithubException as e:
