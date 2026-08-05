@@ -561,10 +561,19 @@ def render_dashboard(customer_config, current_newsletter, user_email, customer_i
                 st.session_state["newsletter_announcements_input"] = ""
 
             st.markdown("#### Introduction & announcements")
+            intro_hdr, intro_btn = st.columns([4, 1])
+            with intro_hdr:
+                st.caption("A. What's in this newsletter (3–4 sentences — editable)")
+            with intro_btn:
+                if st.button("↻ Regenerate", key="regen_newsletter_intro", help="Rewrite the intro from the current selection"):
+                    st.session_state["newsletter_intro_input"] = drafted
+                    st.session_state["_intro_selection_key"] = selection_key
+                    st.rerun()
             intro_text = st.text_area(
                 "A. What's in this newsletter (3–4 sentences — editable)",
                 height=120,
                 key="newsletter_intro_input",
+                label_visibility="collapsed",
             )
             announcements = st.text_area(
                 "B. APBA announcements & upcoming events (manual)",
